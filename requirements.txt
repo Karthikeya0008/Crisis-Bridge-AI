@@ -1,0 +1,9 @@
+# Core: enough for the full offline pipeline, HumAID download, Groq/Gemini answers and the Streamlit UI.
+# Tested on Python 3.11. CPU only, no GPU needed.
+numpy>=1.26,<3
+pandas>=2.1
+scikit-learn>=1.4
+pyarrow>=15
+requests>=2.31
+python-dotenv>=1.0
+streamlit>=1.37

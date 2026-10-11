@@ -1,0 +1,7 @@
+# Optional upgrades. Everything works without these.
+# Neural sentence embeddings (all-MiniLM-L6-v2, ~90 MB download on first use). Pulls in PyTorch (~200 MB, CPU build on Windows).
+sentence-transformers>=3.0
+# FAISS vector store (otherwise an exact NumPy store is used)
+faiss-cpu>=1.8
+# Reddit live feed (also needs REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env)
+praw>=7.7

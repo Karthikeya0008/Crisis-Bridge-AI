@@ -1,0 +1,51 @@
+id,timestamp,source,text,label
+S001,2026-10-10T06:42:00+05:30,sample,"4 people trapped on the second floor near XYZ bridge, need rescue",requests_or_urgent_needs
+S002,2026-10-10T06:55:00+05:30,sample,"Water rising fast near XYZ bridge, family of 6 stuck on the roof, please send a boat immediately",requests_or_urgent_needs
+S003,2026-10-10T07:10:00+05:30,sample,"Urgent: elderly man with heart condition needs medicine at Velachery, roads blocked, please help",requests_or_urgent_needs
+S004,2026-10-10T07:25:00+05:30,sample,Around 40 families in Mudichur have had no drinking water or food since yesterday. Please send supplies,requests_or_urgent_needs
+S005,2026-10-10T08:05:00+05:30,sample,"Pregnant woman in labour stranded at Tambaram railway station, need an ambulance urgently",requests_or_urgent_needs
+S006,2026-10-10T08:30:00+05:30,sample,Need baby food and blankets for 15 children at the relief camp in Pallikaranai,requests_or_urgent_needs
+S007,2026-10-10T09:12:00+05:30,sample,"SOS! 3 students trapped inside the hostel near Guindy, ground floor fully flooded, need evacuation now",requests_or_urgent_needs
+S008,2026-10-10T05:50:00+05:30,sample,Two people dead and 11 injured after a wall collapsed in Saidapet during heavy rain,injured_or_dead_people
+S009,2026-10-10T07:40:00+05:30,sample,"Bus overturned on the flooded highway near Chengalpattu, at least 8 passengers injured, some critically",injured_or_dead_people
+S010,2026-10-09T22:15:00+05:30,sample,"Landslide in Wayanad district buried 3 houses, 5 bodies recovered so far",injured_or_dead_people
+S011,2026-10-10T09:40:00+05:30,sample,"Man electrocuted by a fallen live wire on Anna Salai, bleeding badly, needs medical help",injured_or_dead_people
+S012,2026-10-09T23:30:00+05:30,sample,"Fishing boat capsized off Kasimedu harbour, 2 fishermen confirmed dead",injured_or_dead_people
+S013,2026-10-10T08:15:00+05:30,sample,"My father went missing near XYZ bridge this morning, last seen wearing a blue shirt. Please contact if found",missing_or_found_people
+S014,2026-10-10T06:20:00+05:30,sample,Missing: 12 year old girl separated from family at Kotturpuram during evacuation,missing_or_found_people
+S015,2026-10-10T10:05:00+05:30,sample,"Found: elderly woman at Adyar relief camp who cannot remember her address, she speaks Tamil only",missing_or_found_people
+S016,2026-10-09T21:45:00+05:30,sample,"4 fishermen from Kasimedu have not returned since the cyclone warning, families worried",missing_or_found_people
+S017,2026-10-10T07:55:00+05:30,sample,Update: the missing boy from Saidapet has been found safe by NDRF team,missing_or_found_people
+S018,2026-10-10T05:30:00+05:30,sample,"Power cut across Velachery and Madipakkam since midnight, transformer blown",infrastructure_and_utility_damage
+S019,2026-10-10T06:10:00+05:30,sample,"XYZ bridge railing damaged and the approach road has caved in, vehicles should avoid it",infrastructure_and_utility_damage
+S020,2026-10-10T07:05:00+05:30,sample,"Mobile network down in Tambaram and Perungalathur, cannot reach relatives",infrastructure_and_utility_damage
+S021,2026-10-09T20:50:00+05:30,sample,"Several trees uprooted on GST Road, traffic completely blocked",infrastructure_and_utility_damage
+S022,2026-10-10T08:45:00+05:30,sample,"Water treatment plant at Porur flooded, drinking water supply suspended for the city",infrastructure_and_utility_damage
+S023,2026-10-10T06:30:00+05:30,sample,Around 300 people evacuated from low lying areas of Mudichur to the government school,displaced_people_and_evacuations
+S024,2026-10-10T08:00:00+05:30,sample,Fire service evacuating residents near XYZ bridge using rubber boats,displaced_people_and_evacuations
+S025,2026-10-09T19:30:00+05:30,sample,Coastal villages near Ennore being evacuated ahead of the cyclone landfall,displaced_people_and_evacuations
+S026,2026-10-10T09:20:00+05:30,sample,Relief camp at Pallikaranai is now overcrowded with nearly 500 displaced people,displaced_people_and_evacuations
+S027,2026-10-10T10:15:00+05:30,sample,Patients being shifted from the flooded ground floor of the hospital in Tambaram,displaced_people_and_evacuations
+S028,2026-10-09T18:00:00+05:30,sample,"IMD issues red alert for Chennai, Chengalpattu and Kancheepuram for the next 48 hours",caution_and_advice
+S029,2026-10-10T05:00:00+05:30,sample,"Residents are advised to stay indoors and avoid the subway near Guindy, it is fully submerged",caution_and_advice
+S030,2026-10-10T07:30:00+05:30,sample,"Do not touch electric poles or wires in waterlogged streets, risk of electrocution",caution_and_advice
+S031,2026-10-09T17:30:00+05:30,sample,Fishermen are warned not to venture into the sea till Sunday,caution_and_advice
+S032,2026-10-10T09:00:00+05:30,sample,"Boil drinking water before use, contamination reported in Saidapet area",caution_and_advice
+S033,2026-10-10T07:15:00+05:30,sample,NDRF teams have rescued 25 people from Velachery so far using boats,rescue_volunteering_or_donation_effort
+S034,2026-10-10T08:20:00+05:30,sample,"Volunteers needed at Adyar relief camp to pack food packets, please come by 11 am",rescue_volunteering_or_donation_effort
+S035,2026-10-10T09:30:00+05:30,sample,Our college NSS unit is collecting dry rations and clothes for flood victims in Mudichur,rescue_volunteering_or_donation_effort
+S036,2026-10-10T10:30:00+05:30,sample,Navy helicopter airlifted 6 people stranded on a rooftop in Kotturpuram,rescue_volunteering_or_donation_effort
+S037,2026-10-09T22:40:00+05:30,sample,Donate to the Chief Minister's relief fund to support cyclone affected families,rescue_volunteering_or_donation_effort
+S038,2026-10-10T08:10:00+05:30,sample,"Praying for everyone affected by the floods in Chennai, stay safe",sympathy_and_support
+S039,2026-10-10T09:05:00+05:30,sample,"Heartbreaking to see the visuals from Wayanad, my thoughts are with the families",sympathy_and_support
+S040,2026-10-10T10:00:00+05:30,sample,Salute to the fishermen who are rescuing people with their own boats,sympathy_and_support
+S041,2026-10-09T23:00:00+05:30,sample,"Stay strong Chennai, we have come through this before",sympathy_and_support
+S042,2026-10-10T10:40:00+05:30,sample,Deepest condolences to the families of those who lost their lives in Saidapet,sympathy_and_support
+S043,2026-10-10T06:00:00+05:30,sample,"Chennai received 210 mm of rain in the last 24 hours, the highest this season",other_relevant_information
+S044,2026-10-10T07:50:00+05:30,sample,"Chembarambakkam lake gates opened, 5000 cusecs of water being released",other_relevant_information
+S045,2026-10-10T08:50:00+05:30,sample,Schools and colleges in Chennai and Chengalpattu remain closed tomorrow,other_relevant_information
+S046,2026-10-09T21:00:00+05:30,sample,Cyclone expected to make landfall near Mamallapuram by midnight,other_relevant_information
+S047,2026-10-10T09:50:00+05:30,sample,Suburban train services between Tambaram and Beach suspended due to waterlogging,other_relevant_information
+S048,2026-10-10T08:40:00+05:30,sample,Perfect rainy day for hot bajji and filter coffee,not_humanitarian
+S049,2026-10-10T09:45:00+05:30,sample,"New phone launch event postponed, they say tickets will be refunded",not_humanitarian
+S050,2026-10-10T10:20:00+05:30,sample,"Cricket match at Chepauk washed out, so disappointed",not_humanitarian
