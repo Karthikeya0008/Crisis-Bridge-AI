@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrisisBridge AI</title>
+  <meta name="description" content="RAG-augmented disaster response prioritization: commander query console and live priority feed.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E8590C' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M2 18h20M4 18v-4M20 18v-4M2 14c4-6.5 16-6.5 20 0M8 18v-6M12 18v-7.5M16 18v-6'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=MuseoModerno:wght@300;500;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M2 18h20M4 18v-4M20 18v-4M2 14c4-6.5 16-6.5 20 0M8 18v-6M12 18v-7.5M16 18v-6"/></symbol>
+    <symbol id="i-overview" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></symbol>
+    <symbol id="i-query" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></symbol>
+    <symbol id="i-feed" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="i-process" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8h8M7 12h10M7 16h6"/></symbol>
+    <symbol id="i-sources" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></symbol>
+    <symbol id="i-system" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+    <symbol id="i-detect" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.3"/><path d="M12.9 11.1L18 6"/></symbol>
+    <symbol id="i-extract" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/></symbol>
+    <symbol id="i-prioritize" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-need" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M4.93 19.07l4.24-4.24"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/></symbol>
+    <symbol id="i-funnel" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+  </defs>
+</svg>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#overview">
+      <span class="brand-mark"><svg class="ico"><use href="#i-logo"/></svg></span>
+      <span>
+        <span class="brand-name">CrisisBridge <em>AI</em></span>
+        <span class="brand-sub">Disaster response prioritization</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="#overview" data-nav="overview"><svg class="ico"><use href="#i-overview"/></svg>Overview</a>
+      <a href="#query" data-nav="query"><svg class="ico"><use href="#i-query"/></svg>Commander Query</a>
+      <a href="#feed" data-nav="feed"><svg class="ico"><use href="#i-feed"/></svg>Live Priority Feed<span class="nav-count" id="nav-critical" hidden></span></a>
+      <a href="#process" data-nav="process"><svg class="ico"><use href="#i-process"/></svg>Process a Message</a>
+      <a href="#sources" data-nav="sources"><svg class="ico"><use href="#i-sources"/></svg>Data Sources</a>
+      <a href="#system" data-nav="system"><svg class="ico"><use href="#i-system"/></svg>System</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="index-pill" id="index-pill"><span class="dot"></span><span id="index-pill-text">Connecting…</span></div>
+      <div class="team">
+        <span class="eyebrow eyebrow-dark">Team</span>
+        <span>Dara Karthikeya</span>
+        <span>Sahasra Reddy</span>
+        <span>Harshitha Raj</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menu-btn" aria-label="Open menu"><svg class="ico"><use href="#i-menu"/></svg></button>
+      <div>
+        <div class="eyebrow" id="page-eyebrow"></div>
+        <h1 class="page-title" id="page-title"></h1>
+      </div>
+      <div class="topbar-meta" id="topbar-meta"></div>
+    </header>
+
+    <div class="banner" id="no-index" hidden>
+      <svg class="ico"><use href="#i-alert"/></svg>
+      <div><strong>No index loaded.</strong> <span id="no-index-msg">Build one to start answering queries.</span></div>
+      <a class="btn btn-sm" href="#system">Go to System</a>
+    </div>
+
+    <!-- ================================================================ OVERVIEW -->
+    <section class="view" data-view="overview" data-eyebrow="RAG-augmented disaster response prioritization" data-title="Overview">
+      <div class="hero">
+        <div class="hero-text">
+          <div class="eyebrow eyebrow-dark">Natural Language Processing &amp; Computational Linguistics</div>
+          <h2>From raw report to <span class="accent">actionable priority</span></h2>
+          <p>Disaster posts and field reports are classified, mined for <b>what</b>, <b>where</b>, <b>who</b> and <b>how urgent</b>, indexed, and made answerable in plain language, with every answer cited back to the source reports.</p>
+          <form class="hero-ask" id="hero-ask">
+            <input id="hero-q" type="text" placeholder="What is the most critical situation near XYZ bridge right now?" aria-label="Ask a commander question">
+            <button class="btn btn-accent" type="submit"><svg class="ico"><use href="#i-send"/></svg>Ask</button>
+          </form>
+        </div>
+        <div class="hero-example" aria-label="Example transformation">
+          <div class="quote">“4 people trapped on the second floor near XYZ bridge, need rescue.”</div>
+          <div class="hero-arrow"><svg class="ico"><use href="#i-arrow"/></svg></div>
+          <div class="field-grid mini">
+            <div class="field"><span class="field-label">Location</span><span class="field-value">XYZ Bridge</span></div>
+            <div class="field"><span class="field-label">Need</span><span class="field-value">Rescue</span></div>
+            <div class="field"><span class="field-label">People</span><span class="field-value">4</span></div>
+            <div class="field field-critical"><span class="field-label">Priority</span><span class="field-value">Critical</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-icon"><svg class="ico"><use href="#i-detect"/></svg></div>
+          <div class="step-head"><span class="step-num">1</span>Detect</div>
+          <p>Ingest crisis signals from curated datasets, social feeds and disaster APIs.</p>
+          <div class="step-stat"><b id="st-total">–</b><span id="st-total-sub">reports indexed</span></div>
+        </div>
+        <div class="step">
+          <div class="step-icon"><svg class="ico"><use href="#i-extract"/></svg></div>
+          <div class="step-head"><span class="step-num">2</span>Extract</div>
+          <p>Classify each report, then pull location, need type, people count and urgency from the raw text.</p>
+          <div class="step-stat"><b id="st-loc">–</b><span>with a location extracted</span></div>
+        </div>
+        <div class="step">
+          <div class="step-icon"><svg class="ico"><use href="#i-prioritize"/></svg></div>
+          <div class="step-head"><span class="step-num">3</span>Prioritize</div>
+          <p>The RAG layer surfaces the most critical incidents to coordinators on demand.</p>
+          <div class="step-stat"><b id="st-crit">–</b><span>critical incidents</span></div>
+        </div>
+      </div>
+
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-head">
+            <div><div class="eyebrow">Live priority feed</div><h3>Most urgent right now</h3></div>
+            <a class="link" href="#feed">Open feed <svg class="ico"><use href="#i-arrow"/></svg></a>
+          </div>
+          <div id="ov-top" class="incident-list"><div class="empty">Loading…</div></div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <div class="eyebrow">Priority mix</div>
+            <div class="dist-bar" id="ov-dist"></div>
+            <div class="dist-legend" id="ov-dist-legend"></div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Top needs</div>
+            <div id="ov-needs" class="bars"></div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Most-mentioned locations</div>
+            <div id="ov-locs" class="chips"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div><div class="eyebrow">Architecture diagram</div><h3>System flow</h3></div>
+          <a class="link" href="#system">Five layers <svg class="ico"><use href="#i-arrow"/></svg></a>
+        </div>
+        <div class="flow" id="ov-flow"></div>
+      </div>
+
+      <div class="problem">
+        <div class="problem-text">
+          <div class="eyebrow">Problem statement</div>
+          <h3>Signal lost in the noise</h3>
+          <p>During floods, cyclones and earthquakes, thousands of posts arrive within minutes. Trapped people, urgent medical needs and precise locations are buried among rumour, sympathy messages and irrelevant content. Prior systems such as AIDR and TREC-IS classify the stream, but a coordinator still cannot simply ask, “What is critical right now, near XYZ?”</p>
+        </div>
+        <div class="problem-stats">
+          <div class="big-stat"><b>0.36%</b><span>of disaster tweets in India carry precise geo-tags, so location must be inferred from text</span></div>
+          <div class="big-stat"><b>77K+</b><span>human-labelled crisis tweets across 19 real disaster events (HumAID)</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ QUERY -->
+    <section class="view" data-view="query" data-eyebrow="RAG commander query layer" data-title="Commander Query" hidden>
+      <form class="card query-card" id="ask-form">
+        <label class="eyebrow" for="q">Ask in natural language</label>
+        <div class="query-row">
+          <input id="q" type="text" autocomplete="off" placeholder="Critical situations near XYZ bridge?" maxlength="500">
+          <button class="btn btn-accent btn-lg" type="submit" id="ask-btn"><svg class="ico"><use href="#i-send"/></svg>Ask</button>
+        </div>
+        <div class="chips" id="examples"></div>
+        <div class="controls">
+          <label>Reports to retrieve
+            <select id="opt-k"><option>3</option><option selected>5</option><option>8</option><option>10</option><option>15</option></select>
+          </label>
+          <label>Minimum priority
+            <select id="opt-min"><option value="">Any</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+          </label>
+          <label>Answer generator
+            <select id="opt-provider"><option value="auto">Auto</option><option value="groq">Groq</option><option value="gemini">Gemini</option><option value="extractive">Extractive (no LLM)</option></select>
+          </label>
+          <span class="muted small" id="provider-note"></span>
+        </div>
+      </form>
+      <div id="ask-out"></div>
+    </section>
+
+    <!-- ================================================================ FEED -->
+    <section class="view" data-view="feed" data-eyebrow="Auto-ranked incident list" data-title="Live Priority Feed" hidden>
+      <div class="tiles" id="feed-tiles"></div>
+      <div class="card toolbar">
+        <div class="search">
+          <svg class="ico"><use href="#i-funnel"/></svg>
+          <input id="f-q" type="search" placeholder="Filter by location or text, e.g. Velachery">
+        </div>
+        <select id="f-need" aria-label="Need"><option value="">All needs</option></select>
+        <select id="f-source" aria-label="Source"><option value="">All sources</option></select>
+        <label class="toggle"><input type="checkbox" id="f-auto"><span>Auto-refresh</span></label>
+        <a class="btn btn-ghost btn-sm" id="f-csv" href="#"><svg class="ico"><use href="#i-download"/></svg>CSV</a>
+      </div>
+      <div class="card flush">
+        <div class="feed-head">
+          <span>Priority</span><span>Urgency</span><span>Report</span><span>Location</span><span>Need</span><span>People</span>
+        </div>
+        <div id="feed-list"></div>
+        <div class="pager" id="feed-pager"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================ PROCESS -->
+    <section class="view" data-view="process" data-eyebrow="Core capability" data-title="Process a Message" hidden>
+      <div class="grid-1-1">
+        <form class="card" id="proc-form">
+          <label class="eyebrow" for="proc-text">Paste a disaster post or field report</label>
+          <textarea id="proc-text" rows="5" maxlength="2000">4 people trapped on the second floor near XYZ bridge, need rescue</textarea>
+          <div class="chips" id="proc-examples"></div>
+          <div class="form-foot">
+            <label class="toggle"><input type="checkbox" id="proc-add"><span>Add to the index after processing</span></label>
+            <button class="btn btn-accent" type="submit" id="proc-btn"><svg class="ico"><use href="#i-spark"/></svg>Process</button>
+          </div>
+        </form>
+        <div class="card">
+          <div class="eyebrow">What happens</div>
+          <ol class="pipeline-steps">
+            <li><span>1</span><div><b>Humanitarian classification</b><p>TF-IDF + logistic regression over HumAID's labels filters informative reports from noise.</p></div></li>
+            <li><span>2</span><div><b>NER + urgency detection</b><p>Extracts location, need type and people count, then scores urgency on an explainable 0–100 scale.</p></div></li>
+            <li><span>3</span><div><b>Into the RAG index</b><p>Optionally embedded and added, so commander queries can retrieve and cite it straight away.</p></div></li>
+          </ol>
+        </div>
+      </div>
+      <div id="proc-out"></div>
+    </section>
+
+    <!-- ================================================================ SOURCES -->
+    <section class="view" data-view="sources" data-eyebrow="Dataset sources" data-title="Curated Foundation &amp; Live Updates" hidden>
+      <div class="grid-1-1">
+        <div class="card">
+          <div class="col-head"><span class="eyebrow">Curated · for training</span></div>
+          <div id="src-curated" class="source-list"></div>
+        </div>
+        <div class="card">
+          <div class="col-head"><span class="eyebrow">Live · for the RAG feed</span></div>
+          <div id="src-live" class="source-list"></div>
+          <div class="form-foot">
+            <span class="muted small">A source that fails is skipped with a reason; it never stops the pipeline.</span>
+            <button class="btn btn-accent" id="live-btn"><svg class="ico"><use href="#i-refresh"/></svg>Fetch live reports</button>
+          </div>
+          <div id="live-out"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Index composition by source</div>
+        <div id="src-mix" class="bars"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================ SYSTEM -->
+    <section class="view" data-view="system" data-eyebrow="Architecture" data-title="Five Layers, One Pipeline" hidden>
+      <div class="grid-1-1">
+        <div class="stack">
+          <div class="card">
+            <div class="eyebrow">Vector index</div>
+            <div class="kv" id="sys-index"></div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Answer generator</div>
+            <div class="kv" id="sys-llm"></div>
+            <p class="muted small">With no key, or if the API call fails, answers fall back to an extractive summary that still cites its sources. Keys go in <code>.env</code>.</p>
+          </div>
+        </div>
+        <form class="card" id="build-form">
+          <div class="eyebrow">Build / rebuild system</div>
+          <h3>Train the classifier and re-index</h3>
+          <div class="seg" role="radiogroup" aria-label="Training data">
+            <label><input type="radio" name="data" value="sample" checked><span><b>Sample</b><small>Offline, 50 messages</small></span></label>
+            <label><input type="radio" name="data" value="auto"><span><b>Auto</b><small>HumAID, else sample</small></span></label>
+            <label><input type="radio" name="data" value="humaid"><span><b>HumAID</b><small>~7 MB download once</small></span></label>
+          </div>
+          <div class="controls">
+            <label>HumAID training rows (0 = all)<input type="number" id="b-train" value="20000" min="0" step="5000"></label>
+            <label>HumAID tweets to index (0 = all)<input type="number" id="b-index" value="2000" min="0" step="500"></label>
+          </div>
+          <div class="form-foot">
+            <span class="muted small">Rebuilding replaces the current index, including live and manually added reports.</span>
+            <button class="btn btn-accent" type="submit" id="build-btn"><svg class="ico"><use href="#i-layers"/></svg>Build index</button>
+          </div>
+          <div id="build-out"></div>
+        </form>
+      </div>
+      <div class="layers" id="sys-layers"></div>
+    </section>
+
+    <footer class="foot">CrisisBridge AI · NLP &amp; Computational Linguistics · HumAID: Alam et al., ICWSM 2021 (CC BY-NC-SA 4.0)</footer>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

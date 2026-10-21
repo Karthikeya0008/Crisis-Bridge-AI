@@ -17,7 +17,7 @@ RAG-augmented disaster response prioritisation. Reads disaster posts and reports
 | 2c. Urgency | `src/nlp/urgency.py` | Explainable additive score 0-100 -> Critical / High / Medium / Low | |
 | 3. Indexing | `src/rag/embeddings.py`, `indexer.py` | TF-IDF + SVD vectors, NumPy cosine store | all-MiniLM-L6-v2, FAISS |
 | 4. RAG | `src/rag/retriever.py`, `generator.py` | Semantic + location + urgency + recency re-ranking, extractive cited answer | Groq (`openai/gpt-oss-20b`) or Gemini (`gemini-2.5-flash`) |
-| 5. Interface | `src/interface/streamlit_app.py`, `cli.py` | Streamlit console + CLI | |
+| 5. Interface | `src/interface/api.py`, `web/`, `streamlit_app.py`, `cli.py` | Web console (FastAPI + HTML/JS), Streamlit console, CLI | |
 
 `run_pipeline.py` runs stages 1 to 4 end to end and answers a sample query. `src/pipeline.py` is the shared glue used by all entry points.
 
@@ -62,13 +62,25 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
    To train on the full 53k-tweet training split, add `--train-limit 0`.
 
-4. **Streamlit console** (opens http://localhost:8501).
+4. **Web console** (recommended; opens on http://localhost:8000).
+
+   ```powershell
+   python -m src.interface.api
+   ```
+
+   Six views that follow the project deck: Overview (detect, extract, prioritize and the system flow),
+   Commander Query (cited answers with a per-report "why this rank" breakdown), Live Priority Feed
+   (filter, auto-refresh, CSV export), Process a Message, Data Sources (curated vs live, with a live fetch)
+   and System (index details, LLM keys, build or rebuild). The JSON API is documented at
+   http://localhost:8000/docs. Use `--port 9000` to change the port.
+
+5. **Streamlit console** (opens http://localhost:8501).
 
    ```powershell
    streamlit run src/interface/streamlit_app.py
    ```
 
-5. **CLI fallback.**
+6. **CLI fallback.**
 
    ```powershell
    python -m src.interface.cli ask "What is the most critical situation near XYZ bridge right now?"
@@ -127,7 +139,7 @@ src/config.py  src/schema.py  src/pipeline.py
 src/ingestion/  curated_loader.py  live_sources.py
 src/nlp/        preprocess.py  classifier.py  ner.py  urgency.py  processor.py
 src/rag/        embeddings.py  indexer.py  retriever.py  generator.py
-src/interface/  streamlit_app.py  cli.py
+src/interface/  api.py  web/ (index.html, styles.css, app.js)  streamlit_app.py  cli.py
 tests/test_smoke.py
 data/                        created at runtime: cache, models, index (git-ignored)
 ```
