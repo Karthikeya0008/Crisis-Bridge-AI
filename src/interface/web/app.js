@@ -161,9 +161,6 @@ async function loadStatus() {
   $("#index-pill-text").textContent = s.index_ready ? `${fmtInt(s.index.count)} reports indexed` : "No index loaded";
   $("#no-index").hidden = s.index_ready || location.hash === "#system";
   $("#no-index-msg").textContent = s.message || "Build one to start answering queries.";
-  $("#topbar-meta").innerHTML = s.index_ready
-    ? `${esc(s.index.embedder)} · ${esc(s.index.store)}<br>built ${esc(fmtTime(s.index.built_at))}`
-    : "";
   const llm = s.llm;
   const keyNote = [llm.groq.key ? "Groq key set" : "no Groq key", llm.gemini.key ? "Gemini key set" : "no Gemini key"].join(" · ");
   $("#provider-note").textContent = keyNote;

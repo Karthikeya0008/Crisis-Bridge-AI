@@ -366,6 +366,16 @@ def build_status() -> dict:
 
 
 # ---------------------------------------------------------------- frontend
+@app.middleware("http")
+async def revalidate_web_files(request, call_next):
+    # Make browsers re-check index.html / app.js / styles.css on each load (cheap 304s), so a new
+    # index.html is never paired with a stale cached app.js after an update
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html")

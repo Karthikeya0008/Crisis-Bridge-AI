@@ -101,7 +101,6 @@ code { font-family: Consolas, ui-monospace, monospace; font-size: .88em; backgro
 .main { min-width: 0; padding: 0 36px 28px; display: flex; flex-direction: column; gap: 22px; }
 .topbar { display: flex; align-items: flex-end; gap: 16px; padding-top: 28px; }
 .page-title { font-size: 2rem; margin-top: 4px; }
-.topbar-meta { margin-left: auto; color: var(--muted); font-size: .85rem; text-align: right; }
 .menu-btn { display: none; background: none; border: 0; padding: 6px; color: var(--navy); cursor: pointer; }
 .menu-btn .ico { width: 24px; height: 24px; }
 
@@ -482,7 +481,6 @@ details.why[open] summary .ico { transform: rotate(180deg); }
   .menu-btn { display: block; }
   .main { padding: 0 16px 20px; }
   .topbar { align-items: center; padding-top: 16px; }
-  .topbar-meta { display: none; }
   .page-title { font-size: 1.5rem; }
   .grid-1-1, .proc-cols, .why-body { grid-template-columns: minmax(0, 1fr); }
   .steps { grid-template-columns: minmax(0, 1fr); gap: 10px; }
