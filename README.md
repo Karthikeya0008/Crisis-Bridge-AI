@@ -11,12 +11,12 @@ RAG-augmented disaster response prioritisation. Reads disaster posts and reports
 
 | Stage | Module | Default (offline, CPU) | Optional upgrade |
 |---|---|---|---|
-| 1. Ingestion | `src/ingestion/curated_loader.py`, `live_sources.py` | Bundled 50-message sample, HumAID via HTTPS | GDACS, ReliefWeb, Reddit (PRAW), RSS |
+| 1. Ingestion | `src/ingestion/curated_loader.py`, `live_sources.py` | Bundled 50-message sample, HumAID via HTTPS | GDACS, NDMA SACHET (IMD alerts), ReliefWeb, Reddit (PRAW), RSS |
 | 2a. Classification | `src/nlp/classifier.py` | TF-IDF (word + char) + Logistic Regression, HumAID's 10 labels | |
 | 2b. Entities | `src/nlp/ner.py` | Rule-based locations, people count, need types | spaCy `en_core_web_sm` if installed |
 | 2c. Urgency | `src/nlp/urgency.py` | Explainable additive score 0-100 -> Critical / High / Medium / Low | |
 | 3. Indexing | `src/rag/embeddings.py`, `indexer.py` | TF-IDF + SVD vectors, NumPy cosine store | all-MiniLM-L6-v2, FAISS |
-| 4. RAG | `src/rag/retriever.py`, `generator.py` | Semantic + location + urgency + recency re-ranking, extractive cited answer | Groq (`openai/gpt-oss-20b`) or Gemini (`gemini-2.5-flash`) |
+| 4. RAG | `src/rag/retriever.py`, `generator.py` | Semantic + location + urgency + recency re-ranking, extractive cited answer | Groq (`openai/gpt-oss-20b`) or Gemini (`gemini-3.5-flash`) |
 | 5. Interface | `src/interface/api.py`, `web/`, `streamlit_app.py`, `cli.py` | Web console (FastAPI + HTML/JS), Streamlit console, CLI | |
 
 `run_pipeline.py` runs stages 1 to 4 end to end and answers a sample query. `src/pipeline.py` is the shared glue used by all entry points.
@@ -86,11 +86,11 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
    python -m src.interface.cli ask "What is the most critical situation near XYZ bridge right now?"
    python -m src.interface.cli process "Family of 5 stuck on a roof in Velachery, need a boat"
    python -m src.interface.cli top --n 10
-   python -m src.interface.cli live gdacs rss
+   python -m src.interface.cli live gdacs ndma rss
    python -m src.interface.cli chat
    ```
 
-By default, `run_pipeline.py` uses `--data auto`: it tries HumAID first and falls back to the sample data with a printed reason. Other flags: `--query "..."`, `--k 5`, `--provider groq|gemini|extractive`, and `--live gdacs rss`.
+By default, `run_pipeline.py` uses `--data auto`: it tries HumAID first and falls back to the sample data with a printed reason. Other flags: `--query "..."`, `--k 5`, `--provider groq|gemini|extractive`, and `--live gdacs ndma rss`.
 
 ### LLM answers (optional)
 
@@ -113,7 +113,7 @@ This downloads all-MiniLM-L6-v2 (about 90 MB) on first use. It runs on CPU, and 
 | ReliefWeb API v2 | **Needs a pre-approved `appname`** (required since 1 Nov 2025). Skipped until `RELIEFWEB_APPNAME` is set. |
 | Reddit (PRAW) | Needs `praw` and a Reddit "script" app. Since Nov 2025, new API apps may need Reddit's approval. Skipped until credentials are set. |
 | RSS / Atom | Any feeds listed in `RSS_FEEDS`. The default is the USGS M4.5+ weekly earthquake feed. |
-| NDMA / IMD | **Not implemented**: neither has a stable public RSS feed or API. |
+| NDMA / IMD | Read through NDMA's **SACHET** alert feed (IMD, INCOIS and state SDMA warnings). No key needed. About two thirds of alerts are in regional languages and are skipped, because the NLP stages are English-only. |
 | X / Twitter | Excluded because the API is paid. |
 
 A source that fails never stops the pipeline. Each one prints `[OK]` or `[SKIP]` with the reason.

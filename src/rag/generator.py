@@ -3,7 +3,8 @@
 Providers (plain HTTPS via requests, no SDKs):
 - Groq   : OpenAI-compatible chat completions. Default model openai/gpt-oss-20b
            (Groq retired llama-3.1-8b-instant / llama-3.3-70b-versatile on 16 Aug 2026).
-- Gemini : generateContent REST API. Default model gemini-2.5-flash.
+- Gemini : generateContent REST API. Default model gemini-3.5-flash (gemini-2.5-flash is closed to new
+           users; gemini-3.7/3.8-flash did not respond on the free tier as of 28 Oct 2026).
 - Extractive: no LLM. Builds a cited answer straight from the retrieved reports. Always available
               and used automatically when no key is set or the API call fails.
 """
@@ -104,7 +105,8 @@ def _call_gemini(prompt: str) -> str:
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": LLM_TEMPERATURE, "maxOutputTokens": 1024},
     }
-    if GEMINI_MODEL.startswith("gemini-2.5-flash"):
+    if "flash" in GEMINI_MODEL:
+        # Thinking roughly doubles latency and is not needed to summarise retrieved reports
         payload["generationConfig"]["thinkingConfig"] = {"thinkingBudget": 0}
     resp = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",

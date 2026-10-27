@@ -1,4 +1,4 @@
-"""Optional live feeds for the RAG index: GDACS, ReliefWeb, Reddit (PRAW) and generic RSS/Atom.
+"""Optional live feeds for the RAG index: GDACS, NDMA SACHET, ReliefWeb, Reddit (PRAW) and generic RSS/Atom.
 
 Every source returns (reports, SourceStatus) and never raises. A failed source produces a clear
 status message and an empty list, so the rest of the pipeline keeps running.
@@ -9,7 +9,9 @@ Known limitations (as of Oct 2026):
   API rejects the call, so this source is skipped until RELIEFWEB_APPNAME is set.
 - Reddit: needs PRAW plus a registered app. Since Nov 2025, new Reddit API apps go through an approval
   step (Responsible Builder Policy), so credentials may not be instant.
-- NDMA / IMD: no stable public RSS/API feed, so they are deliberately not implemented.
+- NDMA / IMD: read through NDMA's SACHET CAP alert feed (public RSS, no key), which carries IMD, INCOIS
+  and state SDMA warnings. About two thirds of the alerts are in regional languages; the NLP stages are
+  English-only, so those are skipped.
 - X/Twitter: excluded, the API is not free.
 """
 
@@ -26,6 +28,7 @@ import requests
 
 from src.config import (
     HTTP_TIMEOUT,
+    NDMA_FEED_URL,
     REDDIT_CLIENT_ID,
     REDDIT_CLIENT_SECRET,
     REDDIT_SUBREDDITS,
@@ -134,6 +137,50 @@ def fetch_gdacs(limit: int = 30) -> tuple[list[Report], SourceStatus]:
         return [], SourceStatus(name, False, 0, msg)
 
 
+# ---------------------------------------------------------------- NDMA SACHET (IMD / INCOIS / SDMA alerts)
+# Function words that show up in English alerts but not in Latin-script regional ones (e.g. Mizo)
+ENGLISH_WORDS = re.compile(
+    r"\b(the|is|are|likely|will|over|with|and|of|in|to|for|at|from|next|hours|places|rain|warning|alert)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_english(text: str) -> bool:
+    if not text or sum(c.isascii() for c in text) / len(text) < 0.9:
+        return False
+    return len({m.lower() for m in ENGLISH_WORDS.findall(text)}) >= 3
+
+
+def fetch_ndma(limit: int = 30) -> tuple[list[Report], SourceStatus]:
+    name = "NDMA SACHET"
+    try:
+        resp = requests.get(NDMA_FEED_URL, timeout=HTTP_TIMEOUT, headers=HEADERS)
+        resp.raise_for_status()
+        items = ET.fromstring(resp.content).findall(".//item")
+    except ET.ParseError as exc:
+        return [], SourceStatus(name, False, 0, f"response was not valid XML ({exc}).")
+    except Exception as exc:
+        return [], SourceStatus(name, False, 0, _network_error_message(name, exc))
+    reports: list[Report] = []
+    skipped = 0
+    for item in items:
+        text = re.sub(r"[\s.]*\.\.$", ".", _clean(item.findtext("title", "")))  # titles end in ". .." when truncated
+        if not _is_english(text):
+            skipped += 1
+            continue
+        # author looks like "controlroom@ndma.gov.in (IMD Raipur)"; keep the issuing agency
+        issuer = re.search(r"\(([^)]+)\)", item.findtext("author", "") or "")
+        source = f"ndma/{issuer.group(1)}" if issuer else "ndma"
+        reports.append(Report(
+            id=make_id("ndma", text), text=text[:1500], source=source,
+            timestamp=_to_iso(item.findtext("pubDate", "")), url=item.findtext("link", "") or "",
+        ))
+        if len(reports) >= limit:
+            break
+    msg = f"fetched {len(reports)} English alerts (skipped {skipped} in regional languages)"
+    return reports, SourceStatus(name, bool(reports), len(reports), msg)
+
+
 # ---------------------------------------------------------------- ReliefWeb
 def fetch_reliefweb(limit: int = 20, query: str = "flood OR cyclone OR earthquake OR landslide") -> tuple[list[Report], SourceStatus]:
     name = "ReliefWeb"
@@ -234,6 +281,7 @@ def fetch_rss(feeds: list[str] | None = None, limit_per_feed: int = 20) -> tuple
 
 SOURCES = {
     "gdacs": fetch_gdacs,
+    "ndma": fetch_ndma,
     "reliefweb": fetch_reliefweb,
     "reddit": fetch_reddit,
     "rss": fetch_rss,

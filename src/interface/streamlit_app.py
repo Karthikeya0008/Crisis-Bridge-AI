@@ -96,8 +96,9 @@ min_priority = st.sidebar.selectbox("Minimum priority", ["", "Low", "Medium", "H
                                     format_func=lambda p: p or "any")
 
 st.sidebar.subheader("Live feeds (optional)")
-chosen = st.sidebar.multiselect("Sources", list(SOURCES), default=["gdacs", "rss"])
-st.sidebar.caption("Known: GDACS may time out; ReliefWeb needs an approved appname; Reddit needs app credentials.")
+chosen = st.sidebar.multiselect("Sources", list(SOURCES), default=["gdacs", "ndma", "rss"])
+st.sidebar.caption("Known: GDACS may time out; NDMA keeps English alerts only; ReliefWeb needs an approved appname; "
+                   "Reddit needs app credentials.")
 if st.sidebar.button("Fetch live reports"):
     with st.spinner("Fetching live feeds..."):
         added, statuses = service.ingest_live(chosen or None)

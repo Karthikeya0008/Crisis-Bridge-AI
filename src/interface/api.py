@@ -268,6 +268,9 @@ def _live_config() -> list[dict]:
         {"key": "gdacs", "name": "GDACS", "ready": True,
          "desc": "Free real-time global disaster alerts, pre-scored by severity",
          "note": "No key needed. Known to time out from some networks."},
+        {"key": "ndma", "name": "NDMA / IMD (SACHET)", "ready": True,
+         "desc": "Official India alerts from IMD, INCOIS and state disaster authorities",
+         "note": "No key needed. English alerts only; regional-language alerts are skipped."},
         {"key": "reddit", "name": "Reddit (via PRAW)", "ready": reddit_ready,
          "desc": "Crisis-relevant subreddits, a live, structured-enough text feed",
          "note": "Credentials set." if reddit_ready else "Needs REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env and praw installed."},
@@ -277,9 +280,6 @@ def _live_config() -> list[dict]:
         {"key": "rss", "name": "RSS / Atom feeds", "ready": bool(RSS_FEEDS),
          "desc": "Any feeds in RSS_FEEDS (default: USGS M4.5+ earthquakes)",
          "note": f"{len(RSS_FEEDS)} feed(s) configured."},
-        {"key": "ndma", "name": "NDMA / IMD RSS", "ready": False, "unavailable": True,
-         "desc": "India-specific flood and cyclone warnings, regional relevance",
-         "note": "Not implemented: neither publishes a stable public RSS feed or API."},
     ]
 
 
@@ -291,12 +291,10 @@ def _curated_status() -> list[dict]:
          "ok": humaid_cached},
         {"name": "Bundled sample", "desc": "50 hand-written labelled messages for the offline demo",
          "state": "available" if SAMPLE_DATA_PATH.exists() else "missing", "ok": SAMPLE_DATA_PATH.exists()},
-        {"name": "Kaggle “Disaster Tweets”", "desc": "10K hand-labelled tweets, binary relevance pre-filter",
-         "state": "manual download", "ok": False},
         {"name": "CrisisNLP / CrisisBench", "desc": "CrisisLex, SWDM2013, CrisisMMD and AIDR data combined",
-         "state": "planned", "ok": False},
+         "state": "future work", "ok": False},
         {"name": "IDRISI", "desc": "41 events with location-mention labels, for the NER / geo stage",
-         "state": "planned", "ok": False},
+         "state": "future work", "ok": False},
     ]
 
 
@@ -306,7 +304,7 @@ def sources() -> dict:
 
 
 class LiveRequest(BaseModel):
-    sources: list[str] = Field(default_factory=lambda: ["gdacs", "rss"])
+    sources: list[str] = Field(default_factory=lambda: ["gdacs", "ndma", "rss"])
 
 
 @app.post("/api/live")

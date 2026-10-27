@@ -7,7 +7,7 @@ Examples (PowerShell, from the project folder):
     python run_pipeline.py --data sample        # fully offline
     python run_pipeline.py --data humaid --train-limit 0      # full HumAID train split
     python run_pipeline.py --query "where is drinking water needed?"
-    python run_pipeline.py --live gdacs rss     # also pull optional live feeds into the index
+    python run_pipeline.py --live gdacs ndma rss   # also pull optional live feeds into the index
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def main() -> int:
     parser.add_argument("--k", type=int, default=5, help="reports to retrieve")
     parser.add_argument("--provider", choices=["auto", "groq", "gemini", "extractive"], default=None,
                         help="answer generator (default: LLM_PROVIDER from .env)")
-    parser.add_argument("--live", nargs="*", choices=["gdacs", "reliefweb", "reddit", "rss"],
+    parser.add_argument("--live", nargs="*", choices=["gdacs", "ndma", "reliefweb", "reddit", "rss"],
                         help="optional live sources to ingest after indexing")
     args = parser.parse_args()
 

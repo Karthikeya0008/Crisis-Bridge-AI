@@ -1,6 +1,6 @@
 """Offline smoke tests. Run from the project folder:  python -m unittest -v tests.test_smoke
 
-Network calls (HumAID, GDACS, RSS, Groq, Gemini) are mocked, so these pass with no internet.
+Network calls (HumAID, GDACS, NDMA, RSS, Groq, Gemini) are mocked, so these pass with no internet.
 They check parsing and graceful-failure logic, not the live services themselves.
 """
 
@@ -144,6 +144,22 @@ class TestIngestion(unittest.TestCase):
             reports, status = live_sources.fetch_gdacs()
         self.assertFalse(status.ok)
         self.assertIn("timed out", status.message)
+
+    def test_ndma_keeps_english_alerts(self):
+        feed = """<?xml version="1.0"?><rss><channel>
+          <item><title>Heavy Rain is likely to occur at isolated places over Bastar in next 3 hours. ..</title>
+          <author>controlroom@ndma.gov.in (IMD Raipur)</author><link>https://example.org/a</link>
+          <pubDate>Tue, 27 Oct 2026 11:21:00 GMT</pubDate></item>
+          <item><title>మీ ప్రాంతంలో పిడుగులు పడే అవకాశం ఉంది.</title><author>x (Andhra Pradesh SDMA)</author></item>
+          <item><title>KHAWCHIN: Lunglei leh Mamit District hmun hrang hrangah, Ruah sur leh Tek tla awm thei a ni.</title></item>
+        </channel></rss>""".encode("utf-8")
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, content=feed)):
+            reports, status = live_sources.fetch_ndma()
+        self.assertTrue(status.ok)
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0].source, "ndma/IMD Raipur")
+        self.assertEqual(reports[0].text, "Heavy Rain is likely to occur at isolated places over Bastar in next 3 hours.")
+        self.assertIn("skipped 2", status.message)
 
     def test_reliefweb_needs_appname(self):
         with mock.patch.object(live_sources, "RELIEFWEB_APPNAME", ""):
