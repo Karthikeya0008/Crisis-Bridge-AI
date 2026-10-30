@@ -16,6 +16,7 @@ from src.ingestion.curated_loader import (
 )
 from src.nlp.preprocess import normalize_for_model
 from src.ingestion.live_sources import SourceStatus, fetch_all
+from src.ingestion.translate import restore_originals
 from src.nlp.classifier import HumanitarianClassifier, TrainResult
 from src.nlp.processor import CrisisProcessor
 from src.rag.generator import Answer, generate_answer
@@ -109,7 +110,12 @@ class CommanderService:
 
     @classmethod
     def load(cls) -> "CommanderService":
-        return cls(CrisisProcessor.from_saved(), CrisisIndex.load())
+        index = CrisisIndex.load()
+        restored = restore_originals(index.reports)
+        if restored:  # one-time upgrade of reports translated before their original wording was stored
+            log.info("Restored the original wording of %d translated reports", restored)
+            index.save()
+        return cls(CrisisProcessor.from_saved(), index)
 
     def ask(self, query: str, k: int = 5, provider: str | None = None, min_priority: str = "") -> tuple[Answer, list[RetrievedReport], QueryPlan]:
         results, plan = self.retriever.retrieve(query, k=k, min_priority=min_priority)

@@ -64,6 +64,28 @@ def _parse(reply: str, batch: list[str]) -> dict[str, list[str]]:
     return out
 
 
+TAG_RE = re.compile(r"\s*\[translated from ([^\]]+)\]\s*$")
+
+
+def restore_originals(reports: list) -> int:
+    """Reports translated before original_text existed only carry the '[translated from X]' tag.
+
+    Their original wording is still in the translation cache, keyed by the original; look it up by the
+    English text and fill original_text / language back in. Returns how many reports were restored.
+    """
+    pending = [r for r in reports if not r.original_text and TAG_RE.search(r.text)]
+    if not pending:
+        return 0
+    by_english = {english: (original, language) for original, (english, language) in _load_cache().items()}
+    restored = 0
+    for report in pending:
+        found = by_english.get(TAG_RE.sub("", report.text))
+        if found:
+            report.original_text, report.language = found
+            restored += 1
+    return restored
+
+
 def translate_to_english(texts: list[str]) -> tuple[dict[str, tuple[str, str]], str]:
     """Map each text to (english, source language). Texts that could not be translated are absent.
 

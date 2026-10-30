@@ -208,6 +208,19 @@ class TestIngestion(unittest.TestCase):
         self.assertEqual(out, {})
         self.assertIn("off", note)
 
+    def test_restore_originals_from_translation_cache(self):
+        from src.ingestion import translate
+        from src.schema import Report
+        old = Report(id="ndma-1", text="Heavy rain likely in Patna. [translated from Hindi]", source="ndma")
+        english = Report(id="ndma-2", text="Heavy Rain likely over Bastar.", source="ndma")
+        with tempfile.TemporaryDirectory() as d:
+            cache = Path(d) / "t.json"
+            cache.write_text('{"पटना में भारी बारिश की संभावना": ["Heavy rain likely in Patna.", "Hindi"]}', encoding="utf-8")
+            with mock.patch.object(translate, "CACHE_PATH", cache):
+                self.assertEqual(translate.restore_originals([old, english]), 1)
+        self.assertEqual((old.original_text, old.language), ("पटना में भारी बारिश की संभावना", "Hindi"))
+        self.assertEqual(english.original_text, "")
+
     def test_google_news_headlines(self):
         feed = b"""<?xml version="1.0"?><rss><channel>
           <item><title>Flood alert in Assam as Brahmaputra rises - The Hindu</title><source url="https://www.thehindu.com">The Hindu</source>
