@@ -154,13 +154,45 @@ class TestIngestion(unittest.TestCase):
           <item><title>మీ ప్రాంతంలో పిడుగులు పడే అవకాశం ఉంది.</title><author>x (Andhra Pradesh SDMA)</author></item>
           <item><title>KHAWCHIN: Lunglei leh Mamit District hmun hrang hrangah, Ruah sur leh Tek tla awm thei a ni.</title></item>
         </channel></rss>""".encode("utf-8")
-        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, content=feed)):
+        no_translation = ({}, "no GROQ_API_KEY or GEMINI_API_KEY to translate with")
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, content=feed)), \
+                mock.patch.object(live_sources, "translate_to_english", return_value=no_translation):
             reports, status = live_sources.fetch_ndma()
         self.assertTrue(status.ok)
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].source, "ndma/IMD Raipur")
         self.assertEqual(reports[0].text, "Heavy Rain is likely to occur at isolated places over Bastar in next 3 hours.")
         self.assertIn("skipped 2", status.message)
+        self.assertIn("no GROQ_API_KEY", status.message)
+        # with an LLM available, the Telugu alert is translated and tagged instead of skipped
+        telugu = "మీ ప్రాంతంలో పిడుగులు పడే అవకాశం ఉంది."
+        translated = ({telugu: ("There is a possibility of lightning in your area.", "Telugu")}, "")
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, content=feed)), \
+                mock.patch.object(live_sources, "translate_to_english", return_value=translated):
+            reports, status = live_sources.fetch_ndma()
+        self.assertEqual(len(reports), 2)
+        self.assertEqual(reports[1].text, "There is a possibility of lightning in your area. [translated from Telugu]")
+        self.assertEqual(reports[1].source, "ndma/Andhra Pradesh SDMA")
+        self.assertIn("translated 1 (1 Telugu)", status.message)
+
+    def test_translator_batches_parses_and_caches(self):
+        from src.ingestion import translate
+        replies = ['Here you go: [{"i": 0, "language": "Hindi", "english": "Heavy rain likely in Patna."}]']
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(translate, "CACHE_PATH", Path(d) / "t.json"), \
+                mock.patch.object(translate, "TRANSLATE_REGIONAL", "auto"), \
+                mock.patch.object(translate, "GROQ_API_KEY", "k"), \
+                mock.patch.object(generator, "_call_groq", side_effect=replies) as call:
+            first, note = translate.translate_to_english(["पटना में भारी बारिश की संभावना", "पटना में भारी बारिश की संभावना"])
+            again, _ = translate.translate_to_english(["पटना में भारी बारिश की संभावना"])
+        self.assertEqual(call.call_count, 1)  # the duplicate was sent once, and the second call came from the cache
+        self.assertEqual(first["पटना में भारी बारिश की संभावना"], ("Heavy rain likely in Patna.", "Hindi"))
+        self.assertEqual(again, first)
+        self.assertEqual(note, "")
+        with mock.patch.object(translate, "TRANSLATE_REGIONAL", "off"):
+            out, note = translate.translate_to_english(["কলকাতায় ঝড়"])
+        self.assertEqual(out, {})
+        self.assertIn("off", note)
 
     def test_google_news_headlines(self):
         feed = b"""<?xml version="1.0"?><rss><channel>
@@ -269,6 +301,51 @@ class TestIngestion(unittest.TestCase):
             out = curated_loader.load_humaid("validation")
         self.assertEqual(list(out.columns), ["text", "label"])
         self.assertEqual(len(out), 2)  # duplicates removed
+
+    def test_crisisbench_maps_labels_and_drops_overlap(self):
+        df = pd.DataFrame({
+            "text": ["Need food and water in Puri", "Donate to the flood relief fund", "My cousin was affected",
+                     "Praying for Odisha", "Bridge washed away near Cuttack"],
+            "class_label": ["requests_or_needs", "donation_and_volunteering", "affected_individual",
+                            "sympathy_and_support", "infrastructure_and_utilities_damage"]})
+        buf = io.BytesIO()
+        df.to_parquet(buf, index=False)
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(curated_loader, "CACHE_DIR", Path(d)), \
+                mock.patch.object(curated_loader.requests, "get", return_value=_fake_response(200, content=buf.getvalue())):
+            out = curated_loader.load_crisisbench("dev", exclude_texts={"praying for odisha"})
+        self.assertEqual(dict(zip(out["text"], out["label"])), {
+            "Need food and water in Puri": "requests_or_urgent_needs",
+            "Donate to the flood relief fund": "rescue_volunteering_or_donation_effort",
+            "Bridge washed away near Cuttack": "infrastructure_and_utility_damage",
+        })  # affected_individual has no HumAID class; the excluded test tweet is gone
+
+    def test_idrisi_loader_and_learned_gazetteer(self):
+        import json as _json
+        import zipfile
+        from src.nlp import location_eval, ner
+        rows = [{"text": "Flooding in Kerala and Alappuzha", "location_mentions": [{"text": "Kerala", "type": "State"}, {"text": "Alappuzha", "type": "City/town"}]},
+                {"text": "Relief camps open in Alappuzha", "location_mentions": [{"text": "Alappuzha", "type": "City/town"}]},
+                {"text": "Mobile phones donated", "location_mentions": []}]
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr(curated_loader.IDRISI_PREFIX + "kerala_floods_2018/train.jsonl", "\n".join(_json.dumps(r) for r in rows))
+            z.writestr(curated_loader.IDRISI_PREFIX + "kerala_floods_2018/dev.jsonl", _json.dumps(rows[0]))
+        with tempfile.TemporaryDirectory() as d, \
+                mock.patch.object(curated_loader, "CACHE_DIR", Path(d)), \
+                mock.patch.object(curated_loader.requests, "get", return_value=_fake_response(200, content=buf.getvalue())):
+            train = curated_loader.load_idrisi("train")
+            dev = curated_loader.load_idrisi("dev")
+        self.assertEqual(len(train), 3)
+        self.assertEqual(train[0]["event"], "kerala_floods_2018")
+        self.assertEqual(len(dev), 1)
+        names = ner.build_learned_gazetteer(train, min_count=2)
+        self.assertEqual(names, ["Alappuzha"])  # seen twice; Kerala only once
+        with ner.use_learned_gazetteer(["Alappuzha", "Mobile"]):
+            self.assertIn("Alappuzha", ner.extract_locations("water rising fast at Alappuzha"))
+            self.assertNotIn("Mobile", ner.extract_locations("mobile network is down"))  # names match case-sensitively
+            score = location_eval.score_locations(dev, "test")
+        self.assertEqual((score.precision, score.recall), (1.0, 1.0))
 
 
 if __name__ == "__main__":

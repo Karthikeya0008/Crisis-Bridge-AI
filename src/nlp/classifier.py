@@ -111,6 +111,7 @@ class HumanitarianClassifier:
         labels: list[str],
         eval_texts: list[str] | None = None,
         eval_labels: list[str] | None = None,
+        sample_weight: list[float] | None = None,
     ) -> TrainResult:
         x = [normalize_for_model(t) for t in texts]
         small = len(x) < 1000
@@ -118,7 +119,8 @@ class HumanitarianClassifier:
         pipeline = _build_pipeline(small)
 
         if eval_texts is not None and eval_labels is not None:
-            pipeline.fit(x, labels)
+            fit_kwargs = {"clf__sample_weight": sample_weight} if sample_weight is not None else {}
+            pipeline.fit(x, labels, **fit_kwargs)
             self.pipeline = pipeline
             preds = [p[0] for p in self.predict(list(eval_texts))]
             truth = list(eval_labels)

@@ -20,7 +20,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 from src.ingestion.live_sources import SOURCES  # noqa: E402
-from src.pipeline import CommanderService, build_system  # noqa: E402
+from src.pipeline import DATA_MODES, CommanderService, build_system  # noqa: E402
 
 DEFAULT_QUERY = "What is the most critical situation near XYZ bridge right now?"
 
@@ -31,7 +31,7 @@ def _limit(value: int) -> int | None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="CrisisBridge AI end-to-end pipeline")
-    parser.add_argument("--data", choices=["auto", "humaid", "sample"], default="auto",
+    parser.add_argument("--data", choices=DATA_MODES, default="auto",
                         help="auto = HumAID if downloadable, else sample (default)")
     parser.add_argument("--train-limit", type=int, default=20000, help="HumAID training rows (0 = all 53k)")
     parser.add_argument("--index-limit", type=int, default=2000, help="HumAID test tweets added to the index (0 = all)")

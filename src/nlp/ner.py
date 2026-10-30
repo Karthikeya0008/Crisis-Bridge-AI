@@ -2,15 +2,21 @@
 
 Rule-based by default (no downloads, works offline, transparent for a course demo). If spaCy and
 en_core_web_sm happen to be installed, their GPE/LOC/FAC entities are merged in as extra locations.
+
+A learned gazetteer extends the small built-in one: place names that IDRISI's human annotators marked at
+least twice in its train split (see src/nlp/location_eval.py). It is saved to data/models and matched
+case-sensitively, so a capitalised "Mobile" is a place but "mobile network" is not.
 """
 
 from __future__ import annotations
 
 import re
+from collections import Counter
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import lru_cache
 
-from src.config import get_logger
+from src.config import MODEL_DIR, get_logger
 from src.nlp.preprocess import clean_text
 
 log = get_logger("nlp.ner")
@@ -87,6 +93,55 @@ def _is_valid_location(loc: str) -> bool:
     return not low.isdigit()
 
 
+LEARNED_GAZETTEER_PATH = MODEL_DIR / "learned_gazetteer.txt"
+
+
+def build_learned_gazetteer(rows: list[dict], min_count: int = 2) -> list[str]:
+    """Place names annotated at least `min_count` times in gold location-mention data (e.g. IDRISI train)."""
+    counts = Counter(m["text"].strip() for r in rows for m in r.get("location_mentions", []))
+    return sorted(
+        name for name, n in counts.items()
+        if n >= min_count and len(name) >= 3 and name[0].isupper() and name.lower() not in NON_LOCATION_WORDS
+    )
+
+
+def save_learned_gazetteer(names: list[str]) -> None:
+    LEARNED_GAZETTEER_PATH.parent.mkdir(parents=True, exist_ok=True)
+    LEARNED_GAZETTEER_PATH.write_text("\n".join(names), encoding="utf-8")
+    _learned_gazetteer_re.cache_clear()
+
+
+def _compile_names(names: list[str]) -> re.Pattern | None:
+    if not names:
+        return None
+    # one alternation, longest names first, so "New South Wales" wins over "Wales"
+    return re.compile(r"\b(" + "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True)) + r")\b")
+
+
+@lru_cache(maxsize=1)
+def _learned_gazetteer_re() -> re.Pattern | None:
+    if not LEARNED_GAZETTEER_PATH.exists():
+        return None
+    return _compile_names([n.strip() for n in LEARNED_GAZETTEER_PATH.read_text(encoding="utf-8").splitlines() if n.strip()])
+
+
+_gazetteer_override: list = []  # stack of patterns set by use_learned_gazetteer(); empty = use the saved file
+
+
+@contextmanager
+def use_learned_gazetteer(names: list[str] | None):
+    """Temporarily replace the learned gazetteer (None or [] switches it off). Used for fair evaluation."""
+    _gazetteer_override.append(_compile_names(names or []))
+    try:
+        yield
+    finally:
+        _gazetteer_override.pop()
+
+
+def _active_learned_re() -> re.Pattern | None:
+    return _gazetteer_override[-1] if _gazetteer_override else _learned_gazetteer_re()
+
+
 @lru_cache(maxsize=1)
 def _spacy_nlp():
     try:
@@ -126,6 +181,11 @@ def extract_locations(text: str, lenient: bool = False) -> list[str]:
     for place in GAZETTEER:
         for m in re.finditer(rf"\b{re.escape(place)}\b", low_text):
             found.append((m.start(), text[m.start():m.end()]))
+
+    learned = _active_learned_re()
+    if learned is not None:
+        for m in learned.finditer(text):
+            found.append((m.start(1), m.group(1)))
 
     nlp = _spacy_nlp()
     if nlp is not None:

@@ -11,8 +11,9 @@ Known limitations (as of Oct 2026):
 - Reddit: needs PRAW plus a registered app. Since Nov 2025, new Reddit API apps go through an approval
   step (Responsible Builder Policy), so credentials may not be instant.
 - NDMA / IMD: read through NDMA's SACHET CAP alert feed (public RSS, no key), which carries IMD, INCOIS
-  and state SDMA warnings. About two thirds of the alerts are in regional languages; the NLP stages are
-  English-only, so those are skipped.
+  and state SDMA warnings. About three quarters of the alerts are in regional languages (mostly Telugu
+  and Hindi). The NLP stages are English-only, so those are translated with the LLM (src/ingestion/
+  translate.py) and tagged "[translated from <language>]"; without an LLM key they are skipped.
 - Google News: public RSS search (no key), one request per query in GOOGLE_NEWS_QUERIES. Headlines only;
   the item description is just a link back to Google News.
 - Bluesky: public post search (no key) on api.bsky.app; public.api.bsky.app answers 403 to searches. If
@@ -35,6 +36,7 @@ from __future__ import annotations
 import html
 import re
 import xml.etree.ElementTree as ET
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -62,6 +64,7 @@ from src.config import (
     RSS_FEEDS,
     get_logger,
 )
+from src.ingestion.translate import translate_to_english
 from src.schema import Report, make_id, utc_now_iso
 
 log = get_logger("ingestion.live")
@@ -177,7 +180,7 @@ def _is_english(text: str) -> bool:
     return len({m.lower() for m in ENGLISH_WORDS.findall(text)}) >= 3
 
 
-def fetch_ndma(limit: int = 30) -> tuple[list[Report], SourceStatus]:
+def fetch_ndma(limit: int = 100) -> tuple[list[Report], SourceStatus]:
     name = "NDMA SACHET"
     try:
         resp = requests.get(NDMA_FEED_URL, timeout=HTTP_TIMEOUT, headers=HEADERS)
@@ -187,23 +190,43 @@ def fetch_ndma(limit: int = 30) -> tuple[list[Report], SourceStatus]:
         return [], SourceStatus(name, False, 0, f"response was not valid XML ({exc}).")
     except Exception as exc:
         return [], SourceStatus(name, False, 0, _network_error_message(name, exc))
-    reports: list[Report] = []
-    skipped = 0
+    alerts = []
     for item in items:
         text = re.sub(r"[\s.]*\.\.$", ".", _clean(item.findtext("title", "")))  # titles end in ". .." when truncated
-        if not _is_english(text):
-            skipped += 1
-            continue
         # author looks like "controlroom@ndma.gov.in (IMD Raipur)"; keep the issuing agency
         issuer = re.search(r"\(([^)]+)\)", item.findtext("author", "") or "")
-        source = f"ndma/{issuer.group(1)}" if issuer else "ndma"
-        reports.append(Report(
-            id=make_id("ndma", text), text=text[:1500], source=source,
-            timestamp=_to_iso(item.findtext("pubDate", "")), url=item.findtext("link", "") or "",
-        ))
-        if len(reports) >= limit:
+        alerts.append((text, f"ndma/{issuer.group(1)}" if issuer else "ndma",
+                       _to_iso(item.findtext("pubDate", "")), item.findtext("link", "") or ""))
+    regional = [a[0] for a in alerts if a[0] and not _is_english(a[0])]
+    translations, note = translate_to_english(regional) if regional else ({}, "")
+    found: dict[str, Report] = {}
+    english = skipped = 0
+    languages: Counter = Counter()
+    for text, source, timestamp, url in alerts:
+        if not text:
+            continue
+        if _is_english(text):
+            body = text
+            english += 1
+        elif text in translations:
+            translated, language = translations[text]
+            body = f"{translated} [translated from {language}]"
+            languages[language] += 1
+        else:
+            skipped += 1
+            continue
+        # the id comes from the original wording, so the same alert keeps its id whether or not it was translated
+        found.setdefault(make_id("ndma", text), Report(id=make_id("ndma", text), text=body[:1500], source=source,
+                                                       timestamp=timestamp, url=url))
+        if len(found) >= limit:
             break
-    msg = f"fetched {len(reports)} English alerts (skipped {skipped} in regional languages)"
+    reports = list(found.values())
+    msg = f"fetched {english} English alerts"
+    if languages:
+        msg += f" and translated {sum(languages.values())} ({', '.join(f'{n} {lang}' for lang, n in languages.most_common())})"
+    if skipped:
+        msg += f"; skipped {skipped} in regional languages" + (f" ({note})" if note else "")
+    msg += f"; {len(reports)} unique alerts"
     return reports, SourceStatus(name, bool(reports), len(reports), msg)
 
 

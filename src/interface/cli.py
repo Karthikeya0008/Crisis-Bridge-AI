@@ -18,7 +18,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 from src.ingestion.live_sources import SOURCES  # noqa: E402
-from src.pipeline import CommanderService, build_system  # noqa: E402
+from src.pipeline import DATA_MODES, CommanderService, build_system  # noqa: E402
 
 
 def _service() -> CommanderService:
@@ -89,7 +89,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     b = sub.add_parser("build", help="train classifier and build the index")
-    b.add_argument("--data", choices=["auto", "humaid", "sample"], default="auto")
+    b.add_argument("--data", choices=DATA_MODES, default="auto")
     b.add_argument("--train-limit", type=int, default=20000)
     b.add_argument("--index-limit", type=int, default=2000)
     b.set_defaults(func=cmd_build)

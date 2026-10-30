@@ -76,12 +76,12 @@ def build_user_prompt(query: str, results: list[RetrievedReport]) -> str:
 
 
 # ---------------------------------------------------------------- providers
-def _call_groq(prompt: str) -> str:
+def _call_groq(prompt: str, system: str = SYSTEM_PROMPT, max_tokens: int = 1024) -> str:
     payload = {
         "model": GROQ_MODEL,
-        "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
         "temperature": LLM_TEMPERATURE,
-        "max_completion_tokens": 1024,
+        "max_completion_tokens": max_tokens,
     }
     if GROQ_MODEL.startswith("openai/gpt-oss"):
         payload["reasoning_effort"] = "low"
@@ -99,11 +99,11 @@ def _call_groq(prompt: str) -> str:
     return content
 
 
-def _call_gemini(prompt: str) -> str:
+def _call_gemini(prompt: str, system: str = SYSTEM_PROMPT, max_tokens: int = 1024) -> str:
     payload = {
-        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": LLM_TEMPERATURE, "maxOutputTokens": 1024},
+        "generationConfig": {"temperature": LLM_TEMPERATURE, "maxOutputTokens": max_tokens},
     }
     if "flash" in GEMINI_MODEL:
         # Thinking roughly doubles latency and is not needed to summarise retrieved reports

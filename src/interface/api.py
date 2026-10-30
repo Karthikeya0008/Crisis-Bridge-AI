@@ -47,6 +47,7 @@ from src.config import (
     get_logger,
 )
 from src.ingestion.live_sources import DEFAULT_LIVE_SOURCES, SOURCES
+from src.nlp.ner import LEARNED_GAZETTEER_PATH
 from src.pipeline import DATA_MODES, CommanderService, build_system
 from src.rag.indexer import CrisisIndex
 from src.rag.retriever import RetrievedReport
@@ -276,7 +277,8 @@ def _live_config() -> list[dict]:
          "note": "No key needed. Known to time out from some networks."},
         {"key": "ndma", "name": "NDMA / IMD (SACHET)", "ready": True,
          "desc": "Official India alerts from IMD, INCOIS and state disaster authorities",
-         "note": "No key needed. English alerts only; regional-language alerts are skipped."},
+         "note": "No key needed. Telugu, Hindi and other regional alerts are translated to English with the LLM "
+                 "(skipped if no Groq or Gemini key)."},
         {"key": "gnews", "name": "Google News", "ready": bool(GOOGLE_NEWS_QUERIES),
          "desc": "Live news headlines for disaster searches, e.g. flood India, cyclone India",
          "note": f"No key needed. {len(GOOGLE_NEWS_QUERIES)} search(es) in GOOGLE_NEWS_QUERIES."},
@@ -309,16 +311,19 @@ def _live_config() -> list[dict]:
 
 def _curated_status() -> list[dict]:
     humaid_cached = (CACHE_DIR / "humaid_train.parquet").exists()
+    crisisbench_cached = (CACHE_DIR / "crisisbench_train.parquet").exists()
+    gazetteer_ready = LEARNED_GAZETTEER_PATH.exists()
     return [
         {"name": "HumAID", "desc": "77K tweets, 19 disasters, humanitarian labels, the primary training set",
          "state": "cached" if humaid_cached else "downloads on build",
          "ok": humaid_cached},
         {"name": "Bundled sample", "desc": "50 hand-written labelled messages for the offline demo",
          "state": "available" if SAMPLE_DATA_PATH.exists() else "missing", "ok": SAMPLE_DATA_PATH.exists()},
-        {"name": "CrisisNLP / CrisisBench", "desc": "CrisisLex, SWDM2013, CrisisMMD and AIDR data combined",
-         "state": "future work", "ok": False},
-        {"name": "IDRISI", "desc": "41 events with location-mention labels, for the NER / geo stage",
-         "state": "future work", "ok": False},
+        {"name": "CrisisNLP / CrisisBench", "desc": "CrisisLex, SWDM2013, CrisisMMD and AIDR data combined; "
+                                                     "build with “+ CrisisBench” to add it to training",
+         "state": "cached" if crisisbench_cached else "downloads on build", "ok": crisisbench_cached},
+        {"name": "IDRISI", "desc": "Gold location-mention labels for 19 disasters; trains and scores the location extractor",
+         "state": "gazetteer learned" if gazetteer_ready else "run location_eval", "ok": gazetteer_ready},
     ]
 
 

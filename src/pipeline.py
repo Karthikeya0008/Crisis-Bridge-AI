@@ -4,8 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from src.config import get_logger
-from src.ingestion.curated_loader import DataUnavailable, dataframe_to_reports, load_humaid, load_sample_data
+import pandas as pd
+
+from src.config import CRISISBENCH_WEIGHT, get_logger
+from src.ingestion.curated_loader import (
+    DataUnavailable,
+    dataframe_to_reports,
+    load_crisisbench,
+    load_humaid,
+    load_sample_data,
+)
+from src.nlp.preprocess import normalize_for_model
 from src.ingestion.live_sources import SourceStatus, fetch_all
 from src.nlp.classifier import HumanitarianClassifier, TrainResult
 from src.nlp.processor import CrisisProcessor
@@ -16,7 +25,7 @@ from src.schema import Report
 
 log = get_logger("pipeline")
 
-DATA_MODES = ("auto", "humaid", "sample")
+DATA_MODES = ("auto", "humaid", "humaid+crisisbench", "sample")
 
 
 @dataclass
@@ -33,6 +42,22 @@ def train_classifier(data: str = "auto", train_limit: int | None = 20000, eval_l
     """Train on HumAID when available (or forced), otherwise on the bundled sample data."""
     messages: list[str] = []
     clf = HumanitarianClassifier()
+    if data == "humaid+crisisbench":
+        # same HumAID test set as plain HumAID, so the two models can be compared directly
+        train_df = load_humaid("train", limit=train_limit)
+        test_df = load_humaid("test", limit=eval_limit)
+        seen = set(load_humaid("test")["text"].map(normalize_for_model))
+        extra = load_crisisbench("train", exclude_texts=seen)
+        combined = pd.concat([train_df, extra], ignore_index=True)
+        weights = [1.0] * len(train_df) + [CRISISBENCH_WEIGHT] * len(extra)
+        log.info("Training classifier on %d HumAID + %d CrisisBench tweets (CrisisBench weight %.2f)...",
+                 len(train_df), len(extra), CRISISBENCH_WEIGHT)
+        result = clf.train(combined["text"].tolist(), combined["label"].tolist(),
+                           test_df["text"].tolist(), test_df["label"].tolist(), sample_weight=weights)
+        result.eval_name = f"HumAID test ({len(test_df)} tweets)"
+        messages.append(f"Trained on {len(train_df)} HumAID + {len(extra)} CrisisBench tweets "
+                        f"(CrisisBench weight {CRISISBENCH_WEIGHT:g}).")
+        return clf, result, "humaid", messages
     if data in ("auto", "humaid"):
         try:
             train_df = load_humaid("train", limit=train_limit)

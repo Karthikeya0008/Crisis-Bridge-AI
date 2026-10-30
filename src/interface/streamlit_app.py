@@ -58,7 +58,7 @@ st.sidebar.caption("RAG-augmented disaster response prioritisation")
 
 index_ready = CrisisIndex.exists(INDEX_DIR)
 with st.sidebar.expander("Build / rebuild system", expanded=not index_ready):
-    data_mode = st.selectbox("Training data", ["sample", "auto", "humaid"],
+    data_mode = st.selectbox("Training data", ["sample", "auto", "humaid", "humaid+crisisbench"],
                              help="sample = offline bundled messages; auto = HumAID if downloadable")
     train_limit = st.number_input("HumAID training rows (0 = all)", 0, 60000, 20000, step=5000)
     index_limit = st.number_input("HumAID tweets to index (0 = all)", 0, 20000, 2000, step=500)
@@ -97,7 +97,7 @@ min_priority = st.sidebar.selectbox("Minimum priority", ["", "Low", "Medium", "H
 
 st.sidebar.subheader("Live feeds (optional)")
 chosen = st.sidebar.multiselect("Sources", list(SOURCES), default=list(DEFAULT_LIVE_SOURCES))
-st.sidebar.caption("Known: GDACS may time out; NDMA keeps English alerts only; news, Bluesky, Mastodon, EONET and "
+st.sidebar.caption("Known: GDACS may time out; NDMA regional alerts are translated with the LLM; news, Bluesky, Mastodon, EONET and "
                    "EMSC need no key; ReliefWeb needs an approved appname; "
                    "Reddit needs app credentials.")
 if st.sidebar.button("Fetch live reports"):

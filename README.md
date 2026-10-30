@@ -11,9 +11,9 @@ RAG-augmented disaster response prioritisation. Reads disaster posts and reports
 
 | Stage | Module | Default (offline, CPU) | Optional upgrade |
 |---|---|---|---|
-| 1. Ingestion | `src/ingestion/curated_loader.py`, `live_sources.py` | Bundled 50-message sample, HumAID via HTTPS | GDACS, NDMA SACHET (IMD alerts), Google News, Indian newspapers, Bluesky, Mastodon, NASA EONET, EMSC, ReliefWeb, Reddit (PRAW), RSS |
+| 1. Ingestion | `src/ingestion/curated_loader.py`, `live_sources.py` | Bundled 50-message sample, HumAID via HTTPS, IDRISI location labels | CrisisBench (extra training data); GDACS, NDMA SACHET (IMD alerts), Google News, Indian newspapers, Bluesky, Mastodon, NASA EONET, EMSC, ReliefWeb, Reddit (PRAW), RSS |
 | 2a. Classification | `src/nlp/classifier.py` | TF-IDF (word + char) + Logistic Regression, HumAID's 10 labels | |
-| 2b. Entities | `src/nlp/ner.py` | Rule-based locations, people count, need types | spaCy `en_core_web_sm` if installed |
+| 2b. Entities | `src/nlp/ner.py`, `location_eval.py` | Rule-based locations plus a gazetteer learned from IDRISI, people count, need types | spaCy `en_core_web_sm` if installed |
 | 2c. Urgency | `src/nlp/urgency.py` | Explainable additive score 0-100 -> Critical / High / Medium / Low | |
 | 3. Indexing | `src/rag/embeddings.py`, `indexer.py` | TF-IDF + SVD vectors, NumPy cosine store | all-MiniLM-L6-v2, FAISS |
 | 4. RAG | `src/rag/retriever.py`, `generator.py` | Semantic + location + urgency + recency re-ranking, extractive cited answer | Groq (`openai/gpt-oss-20b`) or Gemini (`gemini-3.5-flash`) |
@@ -113,7 +113,7 @@ This downloads all-MiniLM-L6-v2 (about 90 MB) on first use. It runs on CPU, and 
 | ReliefWeb API v2 | **Needs a pre-approved `appname`** (required since 1 Nov 2025). Skipped until `RELIEFWEB_APPNAME` is set. |
 | Reddit (PRAW) | Needs `praw` and a Reddit "script" app. Since Nov 2025, new API apps may need Reddit's approval. Skipped until credentials are set. |
 | RSS / Atom | Any feeds listed in `RSS_FEEDS`. The default is the USGS M4.5+ weekly earthquake feed. |
-| NDMA / IMD | Read through NDMA's **SACHET** alert feed (IMD, INCOIS and state SDMA warnings). No key needed. About two thirds of alerts are in regional languages and are skipped, because the NLP stages are English-only. |
+| NDMA / IMD | Read through NDMA's **SACHET** alert feed (IMD, INCOIS, CWC and state SDMA warnings). No key needed. About three quarters of alerts are in regional languages (on 30 Oct 2026: 53 Telugu, 12 Hindi, 7 Bengali, 3 Odia, 3 Marathi out of 100). The NLP stages are English-only, so `src/ingestion/translate.py` translates them with the configured LLM (Groq, else Gemini; `TRANSLATE_REGIONAL`), 20 per request, and tags each one `[translated from <language>]`. Each wording is translated once and cached in `data/cache/translations.json`, so a repeat fetch makes no LLM call. Without an LLM key they are skipped, as before. |
 | Google News | Public RSS search, no key. One request per search in `GOOGLE_NEWS_QUERIES` (default: flood, cyclone, landslide, earthquake and heavy-rain searches for India, last 2 days). Headlines only; the source is stored as `news/<publisher>`. |
 | Bluesky | Public post search on `api.bsky.app`, no key (`public.api.bsky.app` refuses searches with HTTP 403). Searches come from `BLUESKY_QUERIES`. Keyword search is noisy, so a post is kept only if it is English, at least 40 characters, and mentions a disaster term. If Bluesky ever requires a login for search, set `BLUESKY_HANDLE` and an app password in `BLUESKY_APP_PASSWORD`. |
 | Indian newspapers (`india_news`) | The Hindu, NDTV, Times of India and Indian Express national RSS (`INDIA_NEWS_FEEDS`), no key. Most stories are not about disasters, so only those that mention a disaster term are kept. |
@@ -125,15 +125,52 @@ This downloads all-MiniLM-L6-v2 (about 90 MB) on first use. It runs on CPU, and 
 
 A source that fails never stops the pipeline. Each one prints `[OK]` or `[SKIP]` with the reason.
 
-## Optional datasets
+## Extra training data
+
+### IDRISI: location extraction (in use)
+
+IDRISI-R gives human-annotated place names for 19 English disasters (14,392 train and 2,056 dev tweets; the test split is not public). It is downloaded once from GitHub (about 28 MB) and used two ways: place names annotated at least twice in **train** become a learned gazetteer (683 names, saved to `data/models/learned_gazetteer.txt`), and the extractor is scored on **dev**.
+
+```powershell
+python -m src.nlp.location_eval            # score, then build and save the learned gazetteer
+python -m src.nlp.location_eval --no-save  # score only
+```
+
+| Location extractor, IDRISI dev (2,056 tweets) | Precision | Recall | F1 |
+|---|---|---|---|
+| Rules + built-in 100-place gazetteer | 0.676 | 0.587 | 0.628 |
+| + learned gazetteer | 0.686 | 0.865 | **0.765** |
+| + learned gazetteer, each disaster left out of the gazetteer it is scored with | 0.668 | 0.710 | **0.689** |
+
+The last row is the honest number for a disaster the system has not seen. Learned names match case-sensitively, so "mobile network" is not read as Mobile, Alabama. New reports use the gazetteer as soon as the file exists; restart the web console after building it, and rebuild the index if existing reports should be re-tagged.
+
+### CrisisBench: classifier training (optional, off by default)
+
+CrisisBench's English humanitarian task (61,235 train tweets from CrisisLex T6/T26, CrisisNLP, CrisisMMD, AIDR, ISCRAM13, SWDM13 and DRD) is downloaded from Hugging Face (`QCRI/CrisisBench-english`). Its 11 labels map onto HumAID's 10; `affected_individual` has no equivalent and is dropped, and tweets that also appear in the HumAID test split are removed so the score is not inflated.
+
+```powershell
+python run_pipeline.py --data humaid+crisisbench
+```
+
+Each CrisisBench tweet counts `CRISISBENCH_WEIGHT` (default 0.3) times as much as a HumAID tweet. Every model below was trained on the same 20,000 HumAID tweets, and is scored on 5,000 HumAID test tweets and on CrisisBench's own test split (16,672 tweets from the other datasets, with labels mapped the same way):
+
+| Training data | HumAID test: accuracy | macro-F1 | CrisisBench test: accuracy | macro-F1 |
+|---|---|---|---|---|
+| HumAID 20k (default) | **0.728** | **0.716** | 0.537 | 0.467 |
+| + CrisisBench, weight 0.1 | 0.727 | 0.707 | | |
+| + CrisisBench, weight 0.3 | 0.723 | 0.698 | **0.819** | **0.672** |
+| + CrisisBench, weight 1.0 | 0.710 | 0.680 | 0.827 | 0.682 |
+
+CrisisBench never improves the HumAID score. The datasets label tweets differently; for example, CrisisBench has no "other relevant information" class. But the HumAID-only model transfers poorly to the other datasets (0.537 accuracy). At weight 0.3, the model gives up half a point on HumAID and gains 28 points on tweets from other sources, which is closer to what the live feeds bring in. HumAID alone stays the default, so the reported results do not change; build with `humaid+crisisbench` for the more robust model.
+
+### Kaggle (not used)
 
 - **Kaggle "NLP with Disaster Tweets"**: download `train.csv` by hand (requires a Kaggle login) to `data\kaggle\train.csv`. Load it with `src.ingestion.curated_loader.load_kaggle_disaster_tweets()`. Its labels are binary (disaster or not), so it is not used to train the 10-class model.
-- **IDRISI** (location mentions): not wired in yet. It is the planned dataset for evaluating the location extractor.
 
 ## Honest limitations of v1
 
 - **Sample-data classifier.** Fifty messages cannot train a 10-class model on their own, so in sample mode the classifier is blended with a keyword prior. The printed cross-validation score is **optimistic**, because the keywords were written alongside the sample. Use `--data humaid` for a real evaluation.
-- **Rule-based entity extraction.** It works well on the sample style ("near X bridge", "in Velachery"). Expect misses on noisy tweets; this is the obvious next component to improve.
+- **Rule-based entity extraction.** It works well on the sample style ("near X bridge", "in Velachery"). On IDRISI's real disaster tweets it reaches F1 0.69 for an unseen disaster with the learned gazetteer (0.63 without it). A trained sequence tagger is the next step.
 - **Urgency weights are hand-set** (see `src/nlp/urgency.py`), so every score can be explained. Calibrating them against labelled data is a future step.
 - **"Right now"** is measured relative to the newest report in the index, so recency also works on historical data. HumAID tweets have no timestamps and never count as recent.
 

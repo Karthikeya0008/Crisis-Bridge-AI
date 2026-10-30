@@ -51,6 +51,10 @@ for _d in (DATA_DIR, CACHE_DIR, INDEX_DIR, MODEL_DIR):
 
 # ---------------------------------------------------------------- datasets
 HUMAID_REPO = "QCRI/HumAID-all"
+CRISISBENCH_REPO = "QCRI/CrisisBench-english"
+IDRISI_ZIP_URL = "https://github.com/rsuwaileh/IDRISI/archive/refs/heads/main.zip"
+# Weight of each CrisisBench tweet relative to a HumAID tweet in the humaid+crisisbench training mode
+CRISISBENCH_WEIGHT = _env_float("CRISISBENCH_WEIGHT", 0.3)
 HTTP_TIMEOUT = _env_int("HTTP_TIMEOUT", 15)
 
 # ---------------------------------------------------------------- embeddings / index
@@ -74,6 +78,8 @@ LLM_TEMPERATURE = _env_float("LLM_TEMPERATURE", 0.1)
 RELIEFWEB_APPNAME = _env("RELIEFWEB_APPNAME")
 # NDMA SACHET: official CAP alerts from IMD, INCOIS and state disaster authorities (public, no key)
 NDMA_FEED_URL = _env("NDMA_FEED_URL", "https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml")
+# Regional-language SACHET alerts are translated to English with the LLM: auto (Groq, else Gemini) | groq | gemini | off
+TRANSLATE_REGIONAL = _env("TRANSLATE_REGIONAL", "auto").lower()
 # Google News RSS search (public, no key): one request per query, English edition of GOOGLE_NEWS_COUNTRY
 GOOGLE_NEWS_QUERIES = [q.strip() for q in _env(
     "GOOGLE_NEWS_QUERIES", "flood India,cyclone India,landslide India,earthquake India,heavy rain alert India",
