@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from src.config import get_logger
+from src.ingestion.translate import in_other_script, translate_to_english
 from src.nlp.classifier import HumanitarianClassifier
 from src.nlp.ner import extract_entities
 from src.nlp.preprocess import clean_text
@@ -42,6 +43,12 @@ class CrisisProcessor:
         return reports
 
     def process_text(self, text: str, source: str = "manual") -> Report:
+        """Process one message. Text in another script (Tamil, Hindi, Telugu...) is translated to English first."""
         text = clean_text(text) or text
         report = Report(id=make_id(source, text), text=text, source=source)
+        if in_other_script(text):
+            translated = translate_to_english([text])[0].get(text)
+            if translated:
+                english, language = translated
+                report.text, report.original_text, report.language = f"{english} [translated from {language}]", text, language
         return self.process([report])[0]

@@ -128,11 +128,28 @@ function barRows(rows, max, color) {
     <div class="meter"><i style="width:${(n / top) * 100}%;${color ? `background:${color}` : ""}"></i></div><b>${fmtInt(n)}</b></div>`).join("");
 }
 
+// Translated reports keep the wording as published; show the English with a button that swaps in the original
+function reportText(r, cls, attrs = "") {
+  if (!r.original_text) return `<p class="${cls}" ${attrs}>${esc(r.text)}</p>`;
+  const english = r.text.replace(/\s*\[translated from [^\]]*\]\s*$/, "");
+  return `<p class="${cls}" ${attrs} lang="en" data-en="${esc(english)}" data-orig="${esc(r.original_text)}">${esc(english)}</p>
+    <button type="button" class="lang-toggle" aria-pressed="false">${ico("refresh")}Translated from ${esc(r.language || "a regional language")} · <span>Show original</span></button>`;
+}
+
+function toggleLanguage(btn) {
+  const p = btn.previousElementSibling;
+  const original = btn.getAttribute("aria-pressed") !== "true";
+  p.textContent = original ? p.dataset.orig : p.dataset.en;
+  p.lang = original ? "" : "en";
+  btn.setAttribute("aria-pressed", String(original));
+  btn.querySelector("span").textContent = original ? "Show English" : "Show original";
+}
+
 function incidentRow(r) {
   return `<div class="incident">
     ${pill(r.priority)}
     <div>
-      <div class="incident-text">${esc(r.text)}</div>
+      ${reportText(r, "incident-text")}
       <div class="incident-meta">
         ${r.primary_location ? `<span>${ico("pin")}${esc(r.primary_location)}</span>` : ""}
         ${r.primary_need ? `<span>${ico("need")}${esc(r.primary_need)}</span>` : ""}
@@ -270,7 +287,7 @@ function resultCard(item) {
         <span class="muted small">${esc(r.source)} · ${esc(fmtTime(r.timestamp))} · <code>${esc(r.id)}</code></span>
         ${r.url ? `<a class="link small" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Source ${ico("arrow")}</a>` : ""}
       </div>
-      <p class="result-text">${esc(r.text)}</p>
+      ${reportText(r, "result-text")}
       ${fieldGrid(r)}
       <details class="why">
         <summary>Why this rank? ${ico("chev")}</summary>
@@ -391,7 +408,7 @@ async function loadFeed() {
     list.innerHTML = data.items.length ? data.items.map((r) => `<div class="feed-row">
         <div>${pill(r.priority)}</div>
         <div class="urgcell"><b>${Math.round(r.urgency_score)}</b>${meter(r.urgency_score, r.priority)}</div>
-        <div class="txt"><p title="Click to expand">${esc(r.text)}</p><small>${esc(r.source)} · ${esc(fmtTime(r.timestamp))} · ${esc(label(r.category))}</small></div>
+        <div class="txt">${reportText(r, "", 'title="Click to expand"')}<small>${esc(r.source)} · ${esc(fmtTime(r.timestamp))} · ${esc(label(r.category))}</small></div>
         <div class="cell ${r.primary_location ? "" : "none"}">${esc(r.primary_location || "–")}</div>
         <div class="cell ${r.primary_need ? "" : "none"}">${esc(r.primary_need || "–")}</div>
         <div class="cell ${r.people_count != null ? "" : "none"}">${esc(r.people_count ?? "–")}</div>
@@ -448,7 +465,7 @@ async function runProcess() {
     const score = Math.max(0, Math.min(100, r.urgency_score));
     out.innerHTML = `<div class="card proc-result">
       <div class="card-head"><div><div class="eyebrow">Structured, prioritised output</div><h3>Ready to act on in seconds</h3></div>${pill(r.priority)}</div>
-      <div class="proc-quote">“${esc(r.text)}”</div>
+      ${reportText(r, "proc-quote")}
       ${fieldGrid(r)}
       <div class="proc-cols">
         <div class="gauge">
@@ -645,6 +662,7 @@ async function init() {
   $("#build-form").addEventListener("submit", runBuild);
   $("#menu-btn").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
   $("#sidebar").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("open"); });
+  document.addEventListener("click", (e) => { const btn = e.target.closest(".lang-toggle"); if (btn) toggleLanguage(btn); });
   window.addEventListener("hashchange", () => { clearInterval(state.timers.refresh); route(); });
   await loadStatus();
   route();

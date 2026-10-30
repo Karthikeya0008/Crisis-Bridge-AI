@@ -43,6 +43,7 @@ def reports_frame(reports) -> pd.DataFrame:
         "time": r.timestamp,
         "source": r.source,
         "text": r.text,
+        "original": r.original_text,
         "id": r.id,
     } for r in reports])
 
@@ -140,6 +141,9 @@ with tab_query:
                 st.markdown(f"**[{n}]** {priority_badge(r.priority)} &nbsp; urgency **{r.urgency_score:.0f}**/100 "
                             f"&nbsp; `{r.id}` · {r.source} · {r.timestamp or 'time unknown'}", unsafe_allow_html=True)
                 st.write(r.text)
+                if r.original_text:
+                    with st.expander(f"Show original ({r.language})"):
+                        st.write(r.original_text)
                 st.caption(r.summary_line() + (f" | {r.url}" if r.url else ""))
                 with st.expander("Why this rank?"):
                     st.json({"retrieval_score": item.score, **item.components, "urgency_reasons": r.urgency_reasons})
@@ -171,6 +175,9 @@ with tab_process:
             report = service.processor.process_text(text)
         st.markdown(f"### {priority_badge(report.priority)} &nbsp; urgency {report.urgency_score:.0f}/100", unsafe_allow_html=True)
         st.code(report.summary_line())
+        if report.original_text:
+            st.caption(f"Translated from {report.language}. English: {report.text}")
+            st.caption(f"Original: {report.original_text}")
         st.json({
             "category": report.category,
             "category_confidence": report.category_confidence,

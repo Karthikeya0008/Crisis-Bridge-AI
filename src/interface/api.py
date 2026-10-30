@@ -242,10 +242,11 @@ def reports_csv(priority: str = "", q: str = "", source: str = "", need: str = "
     rows = _filtered(priority, q, source, need)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["priority", "urgency", "location", "need", "people", "category", "time", "source", "text", "id"])
+    writer.writerow(["priority", "urgency", "location", "need", "people", "category", "time", "source", "text",
+                     "original_language", "original_text", "id"])
     for r in rows:
         writer.writerow([r.priority, r.urgency_score, r.primary_location, r.primary_need, r.people_count,
-                         r.category.replace("_", " "), r.timestamp, r.source, r.text, r.id])
+                         r.category.replace("_", " "), r.timestamp, r.source, r.text, r.language, r.original_text, r.id])
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": "attachment; filename=crisisbridge_reports.csv"})
 

@@ -70,6 +70,18 @@ class TestNLP(unittest.TestCase):
         self.assertEqual(extract_entities("family of 6 stuck on the roof").people_count, 6)
         self.assertEqual(extract_locations("what is happening near xyz bridge right now", lenient=True), ["xyz bridge"])
 
+    def test_tamil_message_is_translated_then_scored(self):
+        from src.nlp import processor as processor_module
+        proc, _ = SharedSystem.get()
+        tamil = "வேளச்சேரியில் வெள்ளம் காரணமாக 5 பேர் கொண்ட குடும்பம் வீட்டின் மேற்கூரையில் சிக்கியுள்ளது, படகு தேவை."
+        english = "A family of 5 is trapped on the roof of their house due to flooding in Velachery; a boat is needed."
+        with mock.patch.object(processor_module, "translate_to_english", return_value=({tamil: (english, "Tamil")}, "")):
+            r = proc.process_text(tamil)
+        self.assertEqual(r.text, english + " [translated from Tamil]")
+        self.assertEqual((r.original_text, r.language), (tamil, "Tamil"))
+        self.assertEqual((r.primary_location, r.people_count, r.primary_need, r.priority), ("Velachery", 5, "Rescue", "Critical"))
+        self.assertEqual(proc.process_text("Power cut in Tambaram").original_text, "")  # English is left alone
+
     def test_low_priority_chatter(self):
         proc, _ = SharedSystem.get()
         self.assertEqual(proc.process_text("Perfect rainy day for hot bajji and filter coffee").priority, "Low")
@@ -172,6 +184,8 @@ class TestIngestion(unittest.TestCase):
             reports, status = live_sources.fetch_ndma()
         self.assertEqual(len(reports), 2)
         self.assertEqual(reports[1].text, "There is a possibility of lightning in your area. [translated from Telugu]")
+        self.assertEqual((reports[1].original_text, reports[1].language), (telugu, "Telugu"))
+        self.assertEqual(reports[0].original_text, "")  # English alerts are not translated
         self.assertEqual(reports[1].source, "ndma/Andhra Pradesh SDMA")
         self.assertIn("translated 1 (1 Telugu)", status.message)
 

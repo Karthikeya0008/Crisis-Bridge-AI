@@ -153,6 +153,14 @@ select { cursor: pointer; }
   border-radius: 999px; padding: 5px 12px; cursor: default;
 }
 button.chip { cursor: pointer; }
+.lang-toggle {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; margin: 6px 0 2px;
+  font: 600 .74rem var(--body); color: var(--steel); background: var(--ice); border: 0;
+  border-radius: 999px; padding: 3px 10px; cursor: pointer;
+}
+.lang-toggle .ico { width: 12px; height: 12px; }
+.lang-toggle:hover { background: #C9DCE8; }
+.lang-toggle[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-hover); }
 button.chip:hover { border-color: var(--accent); color: var(--accent); }
 .chip .ico { width: 14px; height: 14px; }
 .chip b { color: var(--navy); }
@@ -410,6 +418,8 @@ details.why[open] summary .ico { transform: rotate(180deg); }
 .pipeline-steps p { color: var(--muted); font-size: .9rem; }
 .proc-result { gap: 20px; }
 .proc-quote { font-family: var(--head); font-weight: 300; font-size: 1.25rem; color: var(--navy); line-height: 1.4; border-left: 0; padding: 18px 20px; background: var(--sand); border-radius: 10px; }
+.proc-quote::before { content: "\201C"; }
+.proc-quote::after { content: "\201D"; }
 .proc-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
 .gauge { display: flex; flex-direction: column; gap: 8px; }
 .gauge-track { position: relative; height: 12px; border-radius: 999px; background: linear-gradient(90deg, var(--p-low) 0 25%, var(--p-medium) 25% 45%, var(--p-high) 45% 70%, var(--p-critical) 70% 100%); opacity: .9; }

@@ -26,6 +26,9 @@ class Report:
     timestamp: str = field(default_factory=utc_now_iso)
     url: str = ""
     gold_label: str = ""  # human label when the source provides one (HumAID, sample data)
+    # set when `text` is an English translation: the wording as published, and the language it was in
+    original_text: str = ""
+    language: str = ""
 
     # NLP outputs
     category: str = ""

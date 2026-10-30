@@ -27,6 +27,12 @@ SYSTEM = (
 )
 
 
+def in_other_script(text: str) -> bool:
+    """True when most letters are outside the Latin alphabet (Tamil, Devanagari, Telugu, Bengali...)."""
+    letters = [c for c in text if c.isalpha()]
+    return bool(letters) and sum(not c.isascii() for c in letters) / len(letters) > 0.5
+
+
 def _provider() -> tuple[str, str]:
     """(provider, reason it is unavailable or '')."""
     choice = TRANSLATE_REGIONAL

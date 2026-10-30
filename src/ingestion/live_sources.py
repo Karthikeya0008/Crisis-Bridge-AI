@@ -205,19 +205,21 @@ def fetch_ndma(limit: int = 100) -> tuple[list[Report], SourceStatus]:
     for text, source, timestamp, url in alerts:
         if not text:
             continue
+        original, language = "", ""
         if _is_english(text):
             body = text
             english += 1
         elif text in translations:
             translated, language = translations[text]
-            body = f"{translated} [translated from {language}]"
+            body, original = f"{translated} [translated from {language}]", text
             languages[language] += 1
         else:
             skipped += 1
             continue
         # the id comes from the original wording, so the same alert keeps its id whether or not it was translated
         found.setdefault(make_id("ndma", text), Report(id=make_id("ndma", text), text=body[:1500], source=source,
-                                                       timestamp=timestamp, url=url))
+                                                       timestamp=timestamp, url=url,
+                                                       original_text=original[:1500], language=language))
         if len(found) >= limit:
             break
     reports = list(found.values())
