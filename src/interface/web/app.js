@@ -17,7 +17,7 @@ const PROC_EXAMPLES = [
   "Praying for everyone affected by the floods, stay safe",
 ];
 const LAYERS = [
-  ["Ingestion Layer", "Pulls curated datasets and live feeds (GDACS, NDMA/IMD, Reddit, RSS) into a unified, deduplicated stream, normalising format across sources.", "src/ingestion/"],
+  ["Ingestion Layer", "Pulls curated datasets and live feeds (GDACS, NDMA/IMD, news, Bluesky, Mastodon, EONET, EMSC, RSS) into a unified, deduplicated stream, normalising format across sources.", "src/ingestion/"],
   ["NLP Processing Layer", "Classification filters informative reports; NER extracts location, need type and people count; urgency scoring assigns a priority tier.", "src/nlp/"],
   ["Indexing Layer", "Embeds structured incident reports as dense vectors in a vector store for fast nearest-neighbour retrieval.", "src/rag/embeddings.py · indexer.py"],
   ["RAG Retrieval + Generation", "Retrieves the most relevant reports for a coordinator's query and synthesises a grounded, cited answer.", "src/rag/retriever.py · generator.py"],
@@ -492,11 +492,11 @@ async function renderSources() {
       <div><b>${esc(c.name)}</b><p>${esc(c.desc)}</p></div>
       <span class="badge ${c.ok ? "ok" : "na"}">${esc(c.state)}</span>
     </div>`).join("");
-  const chosen = new Set(store.get("liveSources", ["gdacs", "ndma", "rss"]));
+  const chosen = new Set(store.get("liveSources", ["gdacs", "ndma", "gnews", "india_news", "bluesky", "mastodon", "eonet", "emsc", "rss"]));
   $("#src-live").innerHTML = live.map((s) => `<label class="source">
       <input type="checkbox" value="${esc(s.key)}" ${s.unavailable ? "disabled" : ""} ${chosen.has(s.key) && !s.unavailable ? "checked" : ""}>
       <div><b>${esc(s.name)}</b><p>${esc(s.desc)}</p><div class="note">${esc(s.note)}</div></div>
-      <span class="badge ${s.unavailable ? "na" : s.ready ? "ok" : "warn"}">${s.unavailable ? "not available" : s.ready ? "ready" : "needs setup"}</span>
+      <span class="badge ${s.unavailable ? "na" : s.ready ? "ok" : "warn"}">${s.unavailable ? "not available" : s.ready ? "ready" : "needs approval"}</span>
     </label>`).join("");
   $$("#src-live input").forEach((i) => i.addEventListener("change", () => store.set("liveSources", $$("#src-live input:checked").map((x) => x.value))));
   const o = state.overview;

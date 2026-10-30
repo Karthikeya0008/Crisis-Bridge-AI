@@ -74,6 +74,32 @@ LLM_TEMPERATURE = _env_float("LLM_TEMPERATURE", 0.1)
 RELIEFWEB_APPNAME = _env("RELIEFWEB_APPNAME")
 # NDMA SACHET: official CAP alerts from IMD, INCOIS and state disaster authorities (public, no key)
 NDMA_FEED_URL = _env("NDMA_FEED_URL", "https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml")
+# Google News RSS search (public, no key): one request per query, English edition of GOOGLE_NEWS_COUNTRY
+GOOGLE_NEWS_QUERIES = [q.strip() for q in _env(
+    "GOOGLE_NEWS_QUERIES", "flood India,cyclone India,landslide India,earthquake India,heavy rain alert India",
+).split(",") if q.strip()]
+GOOGLE_NEWS_COUNTRY = _env("GOOGLE_NEWS_COUNTRY", "IN")
+# Bluesky public post search (no key); the login is only used if search without one is refused
+BLUESKY_QUERIES = [q.strip() for q in _env(
+    "BLUESKY_QUERIES", "flood India,cyclone India,landslide India,earthquake India,trapped rescue flood",
+).split(",") if q.strip()]
+BLUESKY_HANDLE = _env("BLUESKY_HANDLE")
+BLUESKY_APP_PASSWORD = _env("BLUESKY_APP_PASSWORD")
+# Indian newspaper RSS (public, no key); only stories that mention a disaster term are kept
+INDIA_NEWS_FEEDS = [u.strip() for u in _env(
+    "INDIA_NEWS_FEEDS",
+    "https://www.thehindu.com/news/national/feeder/default.rss,"
+    "https://feeds.feedburner.com/ndtvnews-india-news,"
+    "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms,"
+    "https://indianexpress.com/section/india/feed/",
+).split(",") if u.strip()]
+# Mastodon public hashtag timelines (no key on mastodon.social); search itself needs a login, tags do not
+MASTODON_INSTANCE = _env("MASTODON_INSTANCE", "https://mastodon.social").rstrip("/")
+MASTODON_TAGS = [t.strip().lstrip("#") for t in _env("MASTODON_TAGS", "flood,floods,flooding,cyclone,earthquake,landslide").split(",") if t.strip()]
+# Area for NASA EONET events and EMSC earthquakes, as min_lon,min_lat,max_lon,max_lat (India and neighbours).
+# Leave empty for worldwide.
+REGION_BBOX = [float(v) for v in _env("REGION_BBOX", "60,0,100,40").split(",") if v.strip()]
+EMSC_MIN_MAGNITUDE = _env_float("EMSC_MIN_MAGNITUDE", 3.0)
 REDDIT_CLIENT_ID = _env("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = _env("REDDIT_CLIENT_SECRET")
 REDDIT_USER_AGENT = _env("REDDIT_USER_AGENT", "CrisisBridgeAI/0.1 (student project)")

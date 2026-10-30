@@ -11,7 +11,7 @@ RAG-augmented disaster response prioritisation. Reads disaster posts and reports
 
 | Stage | Module | Default (offline, CPU) | Optional upgrade |
 |---|---|---|---|
-| 1. Ingestion | `src/ingestion/curated_loader.py`, `live_sources.py` | Bundled 50-message sample, HumAID via HTTPS | GDACS, NDMA SACHET (IMD alerts), ReliefWeb, Reddit (PRAW), RSS |
+| 1. Ingestion | `src/ingestion/curated_loader.py`, `live_sources.py` | Bundled 50-message sample, HumAID via HTTPS | GDACS, NDMA SACHET (IMD alerts), Google News, Indian newspapers, Bluesky, Mastodon, NASA EONET, EMSC, ReliefWeb, Reddit (PRAW), RSS |
 | 2a. Classification | `src/nlp/classifier.py` | TF-IDF (word + char) + Logistic Regression, HumAID's 10 labels | |
 | 2b. Entities | `src/nlp/ner.py` | Rule-based locations, people count, need types | spaCy `en_core_web_sm` if installed |
 | 2c. Urgency | `src/nlp/urgency.py` | Explainable additive score 0-100 -> Critical / High / Medium / Low | |
@@ -86,11 +86,11 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
    python -m src.interface.cli ask "What is the most critical situation near XYZ bridge right now?"
    python -m src.interface.cli process "Family of 5 stuck on a roof in Velachery, need a boat"
    python -m src.interface.cli top --n 10
-   python -m src.interface.cli live gdacs ndma rss
+   python -m src.interface.cli live gdacs ndma gnews india_news bluesky mastodon eonet emsc rss
    python -m src.interface.cli chat
    ```
 
-By default, `run_pipeline.py` uses `--data auto`: it tries HumAID first and falls back to the sample data with a printed reason. Other flags: `--query "..."`, `--k 5`, `--provider groq|gemini|extractive`, and `--live gdacs ndma rss`.
+By default, `run_pipeline.py` uses `--data auto`: it tries HumAID first and falls back to the sample data with a printed reason. Other flags: `--query "..."`, `--k 5`, `--provider groq|gemini|extractive`, and `--live gdacs ndma gnews india_news bluesky mastodon eonet emsc rss`.
 
 ### LLM answers (optional)
 
@@ -114,6 +114,13 @@ This downloads all-MiniLM-L6-v2 (about 90 MB) on first use. It runs on CPU, and 
 | Reddit (PRAW) | Needs `praw` and a Reddit "script" app. Since Nov 2025, new API apps may need Reddit's approval. Skipped until credentials are set. |
 | RSS / Atom | Any feeds listed in `RSS_FEEDS`. The default is the USGS M4.5+ weekly earthquake feed. |
 | NDMA / IMD | Read through NDMA's **SACHET** alert feed (IMD, INCOIS and state SDMA warnings). No key needed. About two thirds of alerts are in regional languages and are skipped, because the NLP stages are English-only. |
+| Google News | Public RSS search, no key. One request per search in `GOOGLE_NEWS_QUERIES` (default: flood, cyclone, landslide, earthquake and heavy-rain searches for India, last 2 days). Headlines only; the source is stored as `news/<publisher>`. |
+| Bluesky | Public post search on `api.bsky.app`, no key (`public.api.bsky.app` refuses searches with HTTP 403). Searches come from `BLUESKY_QUERIES`. Keyword search is noisy, so a post is kept only if it is English, at least 40 characters, and mentions a disaster term. If Bluesky ever requires a login for search, set `BLUESKY_HANDLE` and an app password in `BLUESKY_APP_PASSWORD`. |
+| Indian newspapers (`india_news`) | The Hindu, NDTV, Times of India and Indian Express national RSS (`INDIA_NEWS_FEEDS`), no key. Most stories are not about disasters, so only those that mention a disaster term are kept. |
+| Mastodon | Public hashtag timelines on `MASTODON_INSTANCE` (default mastodon.social), no key; search itself needs a login. Tags come from `MASTODON_TAGS`. Same English and disaster-term filter as Bluesky, and posts older than 7 days are dropped. |
+| NASA EONET | Open natural events (cyclones, floods, wildfires, volcanoes), no key, limited to `REGION_BBOX` (default: India and neighbours). US "prescribed fire" entries are skipped. |
+| EMSC earthquakes | Earthquakes from the European-Mediterranean Seismological Centre, no key, M3+ (`EMSC_MIN_MAGNITUDE`) from the last 7 days inside `REGION_BBOX`. |
+| Not used | PIB press-release RSS only returned Hindi titles, ReliefWeb RSS sits behind a bot wall, and the Copernicus EMS feed was removed (all checked Oct 2026). |
 | X / Twitter | Excluded because the API is paid. |
 
 A source that fails never stops the pipeline. Each one prints `[OK]` or `[SKIP]` with the reason.

@@ -18,7 +18,7 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from src.config import GEMINI_API_KEY, GROQ_API_KEY, INDEX_DIR, LLM_PROVIDER  # noqa: E402
-from src.ingestion.live_sources import SOURCES  # noqa: E402
+from src.ingestion.live_sources import DEFAULT_LIVE_SOURCES, SOURCES  # noqa: E402
 from src.pipeline import CommanderService, build_system  # noqa: E402
 from src.rag.indexer import CrisisIndex  # noqa: E402
 
@@ -96,8 +96,9 @@ min_priority = st.sidebar.selectbox("Minimum priority", ["", "Low", "Medium", "H
                                     format_func=lambda p: p or "any")
 
 st.sidebar.subheader("Live feeds (optional)")
-chosen = st.sidebar.multiselect("Sources", list(SOURCES), default=["gdacs", "ndma", "rss"])
-st.sidebar.caption("Known: GDACS may time out; NDMA keeps English alerts only; ReliefWeb needs an approved appname; "
+chosen = st.sidebar.multiselect("Sources", list(SOURCES), default=list(DEFAULT_LIVE_SOURCES))
+st.sidebar.caption("Known: GDACS may time out; NDMA keeps English alerts only; news, Bluesky, Mastodon, EONET and "
+                   "EMSC need no key; ReliefWeb needs an approved appname; "
                    "Reddit needs app credentials.")
 if st.sidebar.button("Fetch live reports"):
     with st.spinner("Fetching live feeds..."):

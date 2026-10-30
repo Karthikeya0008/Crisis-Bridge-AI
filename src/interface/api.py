@@ -26,13 +26,19 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src.config import (
+    BLUESKY_QUERIES,
     CACHE_DIR,
+    EMSC_MIN_MAGNITUDE,
     GEMINI_API_KEY,
     GEMINI_MODEL,
+    GOOGLE_NEWS_QUERIES,
     GROQ_API_KEY,
     GROQ_MODEL,
     INDEX_DIR,
+    INDIA_NEWS_FEEDS,
     LLM_PROVIDER,
+    MASTODON_INSTANCE,
+    MASTODON_TAGS,
     REDDIT_CLIENT_ID,
     REDDIT_CLIENT_SECRET,
     RELIEFWEB_APPNAME,
@@ -40,7 +46,7 @@ from src.config import (
     SAMPLE_DATA_PATH,
     get_logger,
 )
-from src.ingestion.live_sources import SOURCES
+from src.ingestion.live_sources import DEFAULT_LIVE_SOURCES, SOURCES
 from src.pipeline import DATA_MODES, CommanderService, build_system
 from src.rag.indexer import CrisisIndex
 from src.rag.retriever import RetrievedReport
@@ -271,6 +277,24 @@ def _live_config() -> list[dict]:
         {"key": "ndma", "name": "NDMA / IMD (SACHET)", "ready": True,
          "desc": "Official India alerts from IMD, INCOIS and state disaster authorities",
          "note": "No key needed. English alerts only; regional-language alerts are skipped."},
+        {"key": "gnews", "name": "Google News", "ready": bool(GOOGLE_NEWS_QUERIES),
+         "desc": "Live news headlines for disaster searches, e.g. flood India, cyclone India",
+         "note": f"No key needed. {len(GOOGLE_NEWS_QUERIES)} search(es) in GOOGLE_NEWS_QUERIES."},
+        {"key": "bluesky", "name": "Bluesky", "ready": bool(BLUESKY_QUERIES),
+         "desc": "Public social posts from people on the ground, a free alternative to X",
+         "note": "No key needed. English posts that mention a disaster term are kept."},
+        {"key": "india_news", "name": "Indian newspapers", "ready": bool(INDIA_NEWS_FEEDS),
+         "desc": "The Hindu, NDTV, Times of India and Indian Express national news",
+         "note": "No key needed. Only stories that mention a disaster are kept."},
+        {"key": "mastodon", "name": "Mastodon", "ready": bool(MASTODON_TAGS),
+         "desc": "Public posts under disaster hashtags such as #flood and #cyclone",
+         "note": f"No key needed. English posts from the last 7 days on {MASTODON_INSTANCE.split('//')[-1]}."},
+        {"key": "eonet", "name": "NASA EONET", "ready": True,
+         "desc": "Natural events tracked by NASA: cyclones, floods, wildfires, volcanoes",
+         "note": "No key needed. Limited to India and neighbouring countries (REGION_BBOX)."},
+        {"key": "emsc", "name": "EMSC earthquakes", "ready": True,
+         "desc": "Earthquakes in and around India from the European-Mediterranean Seismological Centre",
+         "note": f"No key needed. M{EMSC_MIN_MAGNITUDE:g}+ from the last 7 days."},
         {"key": "reddit", "name": "Reddit (via PRAW)", "ready": reddit_ready,
          "desc": "Crisis-relevant subreddits, a live, structured-enough text feed",
          "note": "Credentials set." if reddit_ready else "Needs REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env and praw installed."},
@@ -304,7 +328,7 @@ def sources() -> dict:
 
 
 class LiveRequest(BaseModel):
-    sources: list[str] = Field(default_factory=lambda: ["gdacs", "ndma", "rss"])
+    sources: list[str] = Field(default_factory=lambda: list(DEFAULT_LIVE_SOURCES))
 
 
 @app.post("/api/live")

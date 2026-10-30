@@ -38,7 +38,7 @@ SUFFIX_LOC_RE = re.compile(rf"\b({CAP_PHRASE}\s+(?i:{LANDMARK_SUFFIXES}))\b")
 CONTINUATION_RE = re.compile(rf"^(?:\s*,\s*|\s+and\s+|\s*,\s*and\s+)({CAP_PHRASE})")
 # lenient pattern for lowercase user queries: "near xyz bridge", "in velachery"
 LENIENT_RE = re.compile(
-    rf"\b(?:near|at|in|around|behind|opposite|outside)\s+(?:the\s+)?([a-z0-9][\w'\-]*(?:\s+(?!right\b|now\b|today\b|currently\b)[a-z0-9][\w'\-]*){{0,2}})",
+    rf"\b(?:near|at|in|around|behind|opposite|outside)\s+(?:the\s+)?([a-z0-9][\w'\-]*(?:\s+(?!right\b|now\b|today\b|currently\b|this\b|last\b|past\b|yesterday\b|tonight\b)[a-z0-9][\w'\-]*){{0,2}})",
     re.IGNORECASE,
 )
 
@@ -54,7 +54,8 @@ NON_LOCATION_WORDS = {
     "relief", "beach",  # bare "Beach" usually means the station in Chennai context; kept out to avoid noise
 }
 LOWER_STOP = {"right", "now", "today", "currently", "the", "most", "critical", "situation", "situations",
-              "area", "areas", "there", "here", "what", "which", "where", "is", "are", "of", "a"}
+              "area", "areas", "there", "here", "what", "which", "where", "is", "are", "of", "a",
+              "this", "week", "last", "past", "yesterday", "tonight", "recent", "recently", "latest"}
 
 # small gazetteer so sentence-initial place names ("Chennai received...") are still caught
 GAZETTEER = {

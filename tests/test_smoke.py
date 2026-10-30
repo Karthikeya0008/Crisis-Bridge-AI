@@ -1,12 +1,13 @@
 """Offline smoke tests. Run from the project folder:  python -m unittest -v tests.test_smoke
 
-Network calls (HumAID, GDACS, NDMA, RSS, Groq, Gemini) are mocked, so these pass with no internet.
+Network calls (HumAID and every live source, Groq, Gemini) are mocked, so these pass with no internet.
 They check parsing and graceful-failure logic, not the live services themselves.
 """
 
 from __future__ import annotations
 
 import io
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 from pathlib import Path
@@ -160,6 +161,94 @@ class TestIngestion(unittest.TestCase):
         self.assertEqual(reports[0].source, "ndma/IMD Raipur")
         self.assertEqual(reports[0].text, "Heavy Rain is likely to occur at isolated places over Bastar in next 3 hours.")
         self.assertIn("skipped 2", status.message)
+
+    def test_google_news_headlines(self):
+        feed = b"""<?xml version="1.0"?><rss><channel>
+          <item><title>Flood alert in Assam as Brahmaputra rises - The Hindu</title><source url="https://www.thehindu.com">The Hindu</source>
+          <link>https://news.google.com/rss/articles/a</link><pubDate>Fri, 30 Oct 2026 06:27:10 GMT</pubDate></item>
+          <item><title>Cyclone nears Odisha coast, 1 lakh evacuated - NDTV</title><source url="https://www.ndtv.com">NDTV</source>
+          <link>https://news.google.com/rss/articles/b</link><pubDate>Fri, 30 Oct 2026 07:00:00 GMT</pubDate></item>
+        </channel></rss>"""
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, content=feed)) as get:
+            reports, status = live_sources.fetch_google_news(queries=["flood India", "cyclone India"])
+        self.assertEqual(get.call_count, 2)
+        self.assertTrue(status.ok)
+        self.assertEqual(len(reports), 2)  # the same two headlines came back for both searches
+        self.assertEqual(reports[0].text, "Flood alert in Assam as Brahmaputra rises")
+        self.assertEqual(reports[0].source, "news/The Hindu")
+
+    def test_bluesky_keeps_english_disaster_posts(self):
+        def post(rkey, text):
+            return {"uri": f"at://did:plc:x/app.bsky.feed.post/{rkey}", "author": {"handle": "someone.bsky.social"},
+                    "record": {"text": text, "createdAt": "2026-10-30T09:21:12.631Z", "langs": ["en"]}}
+        posts = {"posts": [
+            post("k1", "Water is rising fast in our street in Silchar, three families are trapped and need a boat"),
+            post("k2", "A landslide of repudiation."),
+            post("k3", "Wordle 1,959 3/6 and the coffee was great this morning, love it"),
+            post("k4", "Nuevo sismo registrado: earthquake de magnitud 4.1 cerca de la costa hoy"),
+        ]}
+        refused = _fake_response(403, {"error": "forbidden"})
+        with mock.patch.object(live_sources.requests, "get", side_effect=[refused, _fake_response(200, posts)]):
+            reports, status = live_sources.fetch_bluesky(queries=["flood India"])
+        self.assertTrue(status.ok)
+        self.assertEqual([r.id for r in reports], ["bluesky-k1"])
+        self.assertEqual(reports[0].url, "https://bsky.app/profile/someone.bsky.social/post/k1")
+        self.assertIn("skipped 3", status.message)
+        with mock.patch.object(live_sources, "BLUESKY_HANDLE", ""), \
+                mock.patch.object(live_sources.requests, "get", return_value=refused):
+            reports, status = live_sources.fetch_bluesky(queries=["flood India"])
+        self.assertFalse(status.ok)
+        self.assertIn("BLUESKY_HANDLE", status.message)
+
+    def test_india_news_keeps_disaster_stories(self):
+        feed = b"""<?xml version="1.0"?><rss><channel>
+          <item><title>Cyclone Arnab: 10,000 in relief camps in Ichchapuram</title><description>NH-16 still under water.</description>
+          <link>https://www.thehindu.com/a</link><pubDate>Fri, 30 Oct 2026 13:35:00 +0530</pubDate></item>
+          <item><title>High Court appoints board for temple</title><description>Ruling on administration.</description></item>
+        </channel></rss>"""
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, content=feed)):
+            reports, status = live_sources.fetch_india_news(feeds=["https://www.thehindu.com/news/national/feeder/default.rss"])
+        self.assertEqual([r.text for r in reports], ["Cyclone Arnab: 10,000 in relief camps in Ichchapuram. NH-16 still under water."])
+        self.assertEqual(reports[0].source, "news/The Hindu")
+        self.assertIn("skipped 1", status.message)
+
+    def test_mastodon_keeps_recent_english_disaster_posts(self):
+        now = datetime.now(timezone.utc)
+        def status(sid, html_text, lang="en", days_old=0):
+            return {"id": sid, "content": html_text, "language": lang, "url": f"https://m.example/@a/{sid}",
+                    "created_at": (now - timedelta(days=days_old)).isoformat().replace("+00:00", "Z"), "account": {"acct": "a"}}
+        statuses = [
+            status("1", "<p>Flash flood warning for the river towns, residents should move to higher ground now <a>#<span>flood</span></a></p>"),
+            status("2", "<p>Flash flood warning for the river towns, people are stranded on the bridge</p>", days_old=10),
+            status("3", "<p>Letra da música Landslide de Fleetwood Mac com a tradução completa</p>", lang="pt"),
+        ]
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, statuses)):
+            reports, status_ = live_sources.fetch_mastodon(tags=["flood"])
+        self.assertEqual([r.id for r in reports], ["mastodon-1"])
+        self.assertTrue(reports[0].text.endswith("#flood"))
+        self.assertIn("skipped 2", status_.message)
+
+    def test_eonet_and_emsc_events(self):
+        eonet = {"events": [
+            {"id": "EONET_1", "title": "Tropical Cyclone Arnab", "categories": [{"title": "Severe Storms"}],
+             "sources": [{"id": "JTWC", "url": "https://example.org/arnab"}],
+             "geometry": [{"type": "Point", "date": "2026-10-28T06:00:00Z", "coordinates": [81.8, 16.4]}]},
+            {"id": "EONET_2", "title": "Prescribed Fire Walker Hill", "categories": [{"title": "Wildfires"}], "sources": [],
+             "geometry": [{"type": "Point", "date": "2026-10-28T11:22:00Z", "coordinates": [-111.8, 35.2]}]}]}
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, eonet)):
+            reports, status = live_sources.fetch_eonet()
+        self.assertEqual(len(reports), 1)
+        self.assertIn("Tropical Cyclone Arnab", reports[0].text)
+        self.assertIn("16.4°N, 81.8°E", reports[0].text)
+        emsc = {"features": [{"properties": {"unid": "20261029_0001", "time": "2026-10-29T19:30:46.0Z", "mag": 3.6,
+                                             "depth": 10.0, "flynn_region": "SOUTHWESTERN KASHMIR"}}]}
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(200, emsc)):
+            reports, status = live_sources.fetch_emsc()
+        self.assertTrue(reports[0].text.startswith("M3.6 earthquake in Southwestern Kashmir"))
+        with mock.patch.object(live_sources.requests, "get", return_value=_fake_response(204)):
+            reports, status = live_sources.fetch_emsc()
+        self.assertEqual(reports, [])
+        self.assertTrue(status.ok)
 
     def test_reliefweb_needs_appname(self):
         with mock.patch.object(live_sources, "RELIEFWEB_APPNAME", ""):

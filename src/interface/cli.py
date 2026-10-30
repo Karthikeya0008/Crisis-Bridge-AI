@@ -5,7 +5,7 @@ Run from the project folder:
     python -m src.interface.cli ask "What is the most critical situation near XYZ bridge right now?"
     python -m src.interface.cli process "Family of 5 stuck on a roof in Velachery, need a boat"
     python -m src.interface.cli top --n 10
-    python -m src.interface.cli live gdacs rss
+    python -m src.interface.cli live gdacs ndma gnews india_news bluesky mastodon eonet emsc rss
     python -m src.interface.cli chat
 """
 
